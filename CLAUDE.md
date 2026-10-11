@@ -26,6 +26,10 @@ The point is to show how insane the world is. Every rule below serves that.
   all-Trump round with the day's craziest Trump stories. No mode toggle.
 - **A fake follows its round's case** (`build.match_case`): an all-sentence-case fake beside
   Title Case reals was a tell.
+- **No household-name brands or celebrities as a fake's subject.** "Apple patents smart
+  watermelon scanner" was "too obviously fake": strange true stories are about obscure local
+  players. Prompt rule.
+- **No invented quotes from named people.** Quotes come from unnamed speakers only.
 - **A fake that turns out to be true is the worst failure.** Fakes steer clear of every
   real story of the day; the gates in `gates.py` (allegations, invented names, overlap) are
   in code, not only in the prompt.
@@ -35,6 +39,13 @@ The point is to show how insane the world is. Every rule below serves that.
 - Daily build: `.github/workflows/daily.yml`, deploys Pages from Actions. `puzzle.json` is
   never committed, so past fakes stay out of git history. Force a rebuild of today with
   `gh workflow run daily-puzzle -f force=true`.
-- Providers: `llm.LADDER`, Gemini 3.6 then 3.7 then Groq; one attempt each. Cloudflare is
+- Providers: `llm.LADDER`, Gemini 3.6, 3.7, 3.8, 3.5, then Groq; one attempt each. Each
+  forced rebuild spends ~10 Gemini calls of a 20/day-per-model allowance. Cloudflare is
   deliberately unused (its allowance is shared with Ghostwriters and Photocopy).
 - A dropped mode prints which rule rejected each fake in the run log.
+
+## Declined
+
+- **An in-page "too easy / boring" feedback button** that feeds the prompt examples (offered
+  11/10/2026; Charlie: "no dont add that"). Feedback reaches the rules through chat. Do not
+  re-offer.
