@@ -58,3 +58,8 @@ def test_fake_prompt_states_required_word():
 
 def test_fake_prompt_does_not_show_source_labels():
     assert "(Reuters)" not in prompts.fake_prompt([POOL[0:3]])
+
+
+def test_fake_prompt_steers_away_from_every_real_story():
+    p = prompts.fake_prompt([POOL[0:3]], others=[POOL[20]])
+    assert "never restate, paraphrase, extend or contradict" in p
