@@ -10,17 +10,19 @@
 <meta property="og:url" content="https://charlietrenorden.com/fakle/">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="style.css">
-<script>try{var t=localStorage.getItem("fakle:theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap">
 <script>/* Analytics, gated. Two kinds of visitor are not an audience and never load it: anyone who has opted out with ?nostats=1, and automation, since navigator.webdriver is the one signal true for Playwright, Puppeteer and Selenium alike. Inline and dependency-free on purpose - served from the Worker, a bad deploy there would stop analytics on every site. See site-stats/beacon. */(function(){try{var X="ct.nostats",C="ct_nostats",D=";path=/;domain=.charlietrenorden.com",q=location.search,out=false;if(q.indexOf("nostats=1")>-1){try{localStorage.setItem(X,"1")}catch(e){}document.cookie=C+"=1"+D+";max-age=63072000;samesite=lax";}if(q.indexOf("nostats=0")>-1){try{localStorage.removeItem(X)}catch(e){}document.cookie=C+"="+D+";max-age=0";}try{out=!!localStorage.getItem(X)}catch(e){}if(!out)out=document.cookie.indexOf(C+"=1")>-1;if(out||navigator.webdriver)return;var d=document,s;s=d.createElement("script");s.defer=true;s.src="https://static.cloudflareinsights.com/beacon.min.js";s.setAttribute("data-cf-beacon",'{"token": "32b821209b5441a08df42ccf61c9e6c2"}');d.head.appendChild(s);s=d.createElement("script");s.defer=true;s.src="https://beacon.charlietrenorden.com/b.js";d.head.appendChild(s);}catch(e){}})();</script>
 </head>
 <body>
 <header class="bar">
   <h1>Fakle</h1>
+  <ol class="letters" aria-hidden="true"><li>F</li><li>A</li><li>K</li><li>L</li><li>E</li></ol>
   <nav class="modes" aria-label="Mode">
     <a href="./" data-mode="normal">Daily</a>
     <a href="?mode=trump" data-mode="trump">Trump</a>
   </nav>
-  <button id="theme" type="button"></button>
   <a class="back" href="https://charlietrenorden.com/">&larr; <span class="label">Other projects</span></a>
 </header>
 <main>
@@ -28,6 +30,7 @@
   <ol id="round" class="round"></ol>
   <button id="next" type="button" hidden>Next</button>
   <section id="end" hidden>
+    <ol class="letters" aria-hidden="true"><li>F</li><li>A</li><li>K</li><li>L</li><li>E</li></ol>
     <p id="score" class="score"></p>
     <pre id="share-text"></pre>
     <button id="share" type="button">Copy result</button>

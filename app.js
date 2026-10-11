@@ -18,19 +18,17 @@
     if (a.dataset.mode === mode) a.setAttribute("aria-current", "page");
   });
 
-  var themeBtn = $("theme");
-  function isDark() {
-    var t = document.documentElement.dataset.theme;
-    return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  // The F-A-K-L-E wordmark is the progress row: one letter per round, in the header
+  // while playing and large on the end screen.
+  function paintLetters() {
+    document.querySelectorAll(".letters").forEach(function (ol) {
+      Array.prototype.forEach.call(ol.children, function (li, i) {
+        var p = state.picks[i];
+        li.className = p !== undefined ? (p === rounds[i].fake ? "right" : "wrong")
+          : (!state.done && i === current ? "now" : "");
+      });
+    });
   }
-  function themeLabel() { themeBtn.textContent = isDark() ? "Light" : "Dark"; }
-  themeBtn.addEventListener("click", function () {
-    var next = isDark() ? "light" : "dark";
-    document.documentElement.dataset.theme = next;
-    try { localStorage.setItem("fakle:theme", next); } catch (e) {}
-    themeLabel();
-  });
-  themeLabel();
 
   function score() {
     return state.picks.filter(function (p, i) { return p === rounds[i].fake; }).length;
@@ -78,6 +76,7 @@
     r.headlines.forEach(function (h, j) { ol.appendChild(row(h, j, r, picked)); });
     $("next").hidden = picked === undefined;
     $("next").textContent = i === rounds.length - 1 ? "See result" : "Next";
+    paintLetters();
   }
 
   function pick(j) {
@@ -119,6 +118,7 @@
     $("share-text").textContent = "Fakle" + (mode === "trump" ? " Trump" : "") + " " +
       Number(d[2]) + "/" + Number(d[1]) + " " + s + "/" + rounds.length + "\n" + squares;
     var st = recordStats();
+    paintLetters();
     $("streak").textContent = st ? "Streak " + st.streak + " \u00b7 best " + st.best : "";
     countdown();
   }

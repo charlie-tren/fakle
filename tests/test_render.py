@@ -82,7 +82,7 @@ def test_reveal_marks_fake_and_links_reals(site, browser):
 def test_share_text_has_no_headline_words(site, browser):
     pg, _ = page_at(browser, site)
     play_all(pg)
-    share = pg.locator("#share-text").inner_text()
+    share = pg.locator("#share-text").text_content()
     puzzle = json.loads((ROOT / "tests/fixtures/puzzle.json").read_text(encoding="utf-8"))
     words = {w.lower() for r in puzzle["normal"] for h in r["headlines"] for w in h["text"].split() if len(w) > 4}
     assert share.startswith("Fakle")
@@ -121,7 +121,7 @@ def test_plays_when_storage_throws(site, browser):
     pg.wait_for_selector(".headline")
     play_all(pg)
     assert errors == []
-    assert pg.locator("#share-text").is_visible()
+    assert pg.locator("#share").is_visible()
 
 
 def test_missing_mode_says_so(site, browser):
@@ -204,3 +204,30 @@ def test_copy_falls_back_when_clipboard_denied(site, browser):
 
 def test_copy_says_so_when_it_cannot(site, browser):
     assert _copy_with(browser, site, False, False) == "Copy failed"
+
+
+def test_letter_row_spells_the_name_and_tracks_picks(site, browser):
+    pg, _ = page_at(browser, site)
+    letters = pg.locator(".bar .letters li")
+    assert letters.all_inner_texts() == ["F", "A", "K", "L", "E"]
+    assert "now" in letters.nth(0).get_attribute("class")
+    puzzle = json.loads((ROOT / "tests/fixtures/puzzle.json").read_text(encoding="utf-8"))
+    fake = puzzle["normal"][0]["fake"]
+    pg.locator(".headline").nth(fake).click()
+    assert "right" in letters.nth(0).get_attribute("class")
+    pg.locator("#next").click()
+    pg.locator(".headline").nth((puzzle["normal"][1]["fake"] + 1) % 4).click()
+    assert "wrong" in letters.nth(1).get_attribute("class")
+
+
+def test_end_screen_shows_the_big_letter_row(site, browser):
+    pg, _ = page_at(browser, site)
+    play_all(pg)
+    big = pg.locator("#end .letters li")
+    assert big.count() == 5
+    assert big.first.bounding_box()["width"] > 48
+    assert all(("right" in c or "wrong" in c) for c in [big.nth(i).get_attribute("class") for i in range(5)])
+
+
+def test_no_theme_toggle():
+    assert 'id="theme"' not in (ROOT / "index.html").read_text(encoding="utf-8")
