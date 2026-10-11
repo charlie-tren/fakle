@@ -330,3 +330,28 @@ def test_headlines_set_in_a_news_serif(site, browser):
 
 def test_canonical_url():
     assert '<link rel="canonical" href="https://charlietrenorden.com/fakle/">' in (ROOT / "index.html").read_text(encoding="utf-8")
+
+
+
+def test_last_round_is_labelled_as_the_trump_round(site, browser):
+    pg, _ = page_at(browser, site)
+    assert pg.locator("#round-label").is_hidden()
+    for i in range(4):
+        pg.locator(".headline").first.click()
+        pg.locator("#next").click()
+    assert pg.locator("#round-label").is_visible()
+    assert pg.locator("#round-label").text_content() == "Trump round"
+
+
+def test_no_label_when_the_day_has_no_trump_round(site, browser):
+    ctx = context(browser)
+    pg = ctx.new_page()
+    data = json.loads((ROOT / "tests/fixtures/puzzle.json").read_text(encoding="utf-8"))
+    data["trump_round"] = False
+    pg.route("**/puzzle.json", lambda r: r.fulfill(json=data))
+    pg.goto(site)
+    enter(pg)
+    for i in range(4):
+        pg.locator(".headline").first.click()
+        pg.locator("#next").click()
+    assert pg.locator("#round-label").is_hidden()

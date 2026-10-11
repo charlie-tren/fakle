@@ -37,6 +37,9 @@ main{padding-top:34px;padding-bottom:40px}
   border-radius:16px;border:0;background:#ffd43b;color:var(--fg);box-shadow:0 5px 0 #c99a00;cursor:pointer}
 #next[hidden]{display:none}
 
+.round-label{display:table;margin:0 0 16px;padding:3px 14px 1px;border-radius:999px;background:#fff;color:var(--bad);
+  font-weight:800;font-size:.85rem;letter-spacing:.08em;text-transform:uppercase}
+.round-label[hidden]{display:none}
 #home{text-align:center;color:#fff;padding-top:16px}
 body.at-home .bar .letters{visibility:hidden}
 #home .tiles{list-style:none;display:flex;justify-content:center;gap:12px;padding:0;margin:0 0 22px}

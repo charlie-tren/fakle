@@ -115,3 +115,10 @@ def test_no_invented_quote_from_a_named_person():
     p = prompts.fake_prompt([POOL[0:3]])
     assert "Never put invented words in a named person's mouth" in p
     assert any("unnamed" in s for s in prompts.SHAPES if "quote" in s)
+
+
+
+def test_fake_prompt_warns_off_famous_brands():
+    # Charlie, 11/10/2026: "apple one is too obviously fake".
+    p = prompts.fake_prompt([POOL[0:3]])
+    assert "household-name" in p and "Apple patents" in p

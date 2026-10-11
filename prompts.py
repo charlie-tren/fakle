@@ -68,6 +68,10 @@ Rules:
 - Only name people, places and organisations that appear somewhere in the real
   headlines below, including the list of other real headlines from today.
 - Never claim anyone committed a crime, did anything sexual, is ill or died.
+- Never make a household-name company, brand or celebrity the subject. Strange true
+  stories are almost always about obscure local players, so a famous name doing something
+  quirky reads as invented. Wrong: "Apple patents smart watermelon scanner to help shoppers
+  determine ripeness in stores".
 - Never put invented words in a named person's mouth: a quote comes from an unnamed
   speaker, never from a real person by name.
 

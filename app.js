@@ -66,6 +66,7 @@
     current = i;
     var r = rounds[i];
     var picked = state.picks[i];
+    $("round-label").hidden = !(state.trumpRound && i === rounds.length - 1);
     $("progress").textContent = "Round " + (i + 1) + " of " + rounds.length + " \u00b7 " + score() + " right";
     var ol = $("round");
     ol.innerHTML = "";
@@ -106,6 +107,7 @@
     var s = score();
     $("round").innerHTML = "";
     $("next").hidden = true;
+    $("round-label").hidden = true;
     $("progress").textContent = "";
     $("end").hidden = false;
     $("score").textContent = s + " of " + rounds.length;
@@ -201,6 +203,7 @@
 
   fetch("puzzle.json", { cache: "no-cache" }).then(function (r) { return r.json(); }).then(function (p) {
     rounds = p.rounds;
+    state.trumpRound = !!p.trump_round;
     state.date = p.date;
     if (!rounds || !fresh(p.date)) { $("none").hidden = false; return; }
     var saved = store.get(PROGRESS);
