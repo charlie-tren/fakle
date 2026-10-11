@@ -242,3 +242,11 @@ def test_font_stylesheet_does_not_block_render():
     html = (ROOT / "index.html").read_text(encoding="utf-8")
     link = [l for l in html.splitlines() if "fonts.googleapis.com/css2" in l][0]
     assert 'media="print"' in link and "onload=" in link
+
+
+def test_share_uses_target_and_clown(site, browser):
+    pg, _ = page_at(browser, site)
+    play_all(pg)
+    share = pg.locator("#share-text").text_content()
+    assert chr(0x1F3AF) in share or chr(0x1F921) in share
+    assert chr(0x1F7E9) not in share and chr(0x1F7E5) not in share

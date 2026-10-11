@@ -114,7 +114,10 @@
     $("end").hidden = false;
     $("score").textContent = s + " of " + rounds.length;
     var d = state.date.split("-");
-    var squares = rounds.map(function (r, i) { return state.picks[i] === r.fake ? "\ud83d\udfe9" : "\ud83d\udfe5"; }).join("");
+    // A target for a fake spotted, a clown for one that fooled you.
+    var squares = rounds.map(function (r, i) {
+      return String.fromCodePoint(state.picks[i] === r.fake ? 0x1F3AF : 0x1F921);
+    }).join("");
     $("share-text").textContent = "Fakle" + (mode === "trump" ? " Trump" : "") + " " +
       Number(d[2]) + "/" + Number(d[1]) + " " + s + "/" + rounds.length + "\n" + squares;
     var st = recordStats();
