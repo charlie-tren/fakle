@@ -63,13 +63,28 @@ def generate(prompt: str, temperature: float = 0.95, model: str = MODEL) -> str:
                "generationConfig": {"temperature": temperature,
                                     "responseMimeType": "application/json"}}
     last = None
+    waited = False
     for attempt in range(RETRIES + 1):
         try:
             r = requests.post(f"{ENDPOINT}/{model}:generateContent",
                               params={"key": _key()}, json=payload, timeout=TIMEOUT)
             if r.status_code == 200:
                 return r.json()["candidates"][0]["content"]["parts"][0]["text"]
-            last = f"HTTP {r.status_code}: {r.text[:200]}"
+            # The whole body: the quotaId that says per-minute or per-day sits past
+            # any sensible truncation point.
+            last = f"HTTP {r.status_code}: {r.text}"
+            # A per-minute limit clears in seconds and is worth one wait. A per-day one
+            # is not, and its retry hint is a lie.
+            delay = re.search(r'"retryDelay":\s*"([0-9.]+)s"', r.text)
+            if (r.status_code == 429 and not waited and "PerMinute" in r.text
+                    and delay and float(delay.group(1)) <= 60):
+                waited = True
+                time.sleep(float(delay.group(1)) + 1)
+                r = requests.post(f"{ENDPOINT}/{model}:generateContent",
+                                  params={"key": _key()}, json=payload, timeout=TIMEOUT)
+                if r.status_code == 200:
+                    return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+                last = f"HTTP {r.status_code}: {r.text}"
         except (requests.RequestException, KeyError, IndexError) as exc:
             last = f"{type(exc).__name__}: {exc}"
         if attempt < RETRIES:

@@ -1,3 +1,4 @@
+import json
 import pytest
 
 import gemini
@@ -114,3 +115,29 @@ def test_ladder_has_four_gemini_models_before_groq():
     names = [n for n, _ in llm.LADDER]
     assert names[:4] == ["gemini"] * 4 and names[-1] == "groq"
     assert len({m for _, m in llm.LADDER}) == len(llm.LADDER)
+
+
+def test_gemini_waits_once_for_a_per_minute_quota(monkeypatch):
+    body = {"error": {"code": 429, "details": [{"violations": [{"quotaId": "GenerateRequestsPerMinutePerProjectPerModel-FreeTier"}]},
+                                               {"retryDelay": "21s"}]}}
+    replies = [_Resp(429, body), _Resp(200, {"candidates": [{"content": {"parts": [{"text": "{}"}]}}]})]
+    replies[0].text = json.dumps(body)
+    slept = []
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    monkeypatch.setattr(gemini.requests, "post", lambda *a, **k: replies.pop(0))
+    monkeypatch.setattr(gemini.time, "sleep", lambda s: slept.append(s))
+    assert gemini.generate("p") == "{}"
+    assert slept and 21 <= slept[0] <= 25
+
+
+def test_gemini_does_not_wait_for_a_daily_quota(monkeypatch):
+    body = {"error": {"code": 429, "details": [{"violations": [{"quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier"}]},
+                                               {"retryDelay": "21s"}]}}
+    r = _Resp(429, body)
+    r.text = json.dumps(body)
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    monkeypatch.setattr(gemini.requests, "post", lambda *a, **k: r)
+    monkeypatch.setattr(gemini.time, "sleep", lambda s: (_ for _ in ()).throw(AssertionError("slept")))
+    with pytest.raises(gemini.GeminiError) as e:
+        gemini.generate("p")
+    assert "PerDay" in str(e.value)
