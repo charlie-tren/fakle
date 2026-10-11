@@ -49,4 +49,6 @@ def check_fake(fake: str, reals: list[str], day_titles: list[str], required: str
         fails.append("new name")
     if required and required not in fw:
         fails.append("required")
+    if fake.endswith(")"):
+        fails.append("format")
     return fails

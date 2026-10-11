@@ -53,3 +53,8 @@ def test_pick_prompt_asks_for_different_stories_per_round():
 def test_fake_prompt_states_required_word():
     assert "must mention Trump" in prompts.fake_prompt([POOL[0:3]], required="trump")
     assert "must mention" not in prompts.fake_prompt([POOL[0:3]])
+
+
+
+def test_fake_prompt_does_not_show_source_labels():
+    assert "(Reuters)" not in prompts.fake_prompt([POOL[0:3]])

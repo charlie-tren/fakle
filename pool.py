@@ -13,7 +13,8 @@ RAW = ("https://raw.githubusercontent.com/the-one-story/the-one-story.github.io/
        "main/data/history/{date}.json")
 # Built with chr() so no tool on the way to disk can rewrite an escape into the glyph.
 QUOTES = {chr(0x2018): "'", chr(0x2019): "'", chr(0x201C): '"', chr(0x201D): '"',
-          chr(0x2013): "-", chr(0x2014): "-"}
+          chr(0x2013): "-", chr(0x2014): "-", chr(0x2011): "-", chr(0x2010): "-",
+          chr(0x00A0): " ", chr(0x202F): " "}
 SUFFIX = re.compile(r"\s+[-|]\s+[A-Z][\w .&']{1,40}$")
 JUNK = re.compile(r"(scores|live updates|live blog|newsletter|podcast|watch:|video:|quiz)", re.I)
 DUPE = 0.6

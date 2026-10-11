@@ -59,3 +59,9 @@ def test_trump_mode_matches_the_word_not_a_substring():
     arts = [{"title": "Bluey trumps Peppa in the ratings race again", "source": "X", "url": ""},
             {"title": "Trump says the diesel deal is done for now", "source": "Y", "url": ""}]
     assert [x["text"] for x in pool.build_pool(arts, trump=True)] == ["Trump says the diesel deal is done for now"]
+
+
+
+def test_odd_hyphens_and_spaces_are_normalised():
+    t = f"150{chr(0x2011)}million{chr(0x2011)}year{chr(0x00A0)}old fossil found in Alberta"
+    assert pool.clean_title(t) == "150-million-year old fossil found in Alberta"

@@ -70,3 +70,8 @@ def test_ordinary_first_word_known_from_the_day_passes():
 def test_required_word_gate():
     assert "required" in gates.check_fake("Putin offers Spain a diesel deal over migration", REALS, DAY, required="trump")
     assert "required" not in gates.check_fake("Trump offers Spain a diesel deal over migration", REALS, DAY, required="trump")
+
+
+def test_fake_ending_in_a_bracket_fails():
+    # Groq copied the source label from the prompt on 11/10/2026.
+    assert "format" in gates.check_fake("Spain asks China to fund migration cooperation (Reuters)", REALS, DAY)

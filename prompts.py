@@ -63,7 +63,8 @@ def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = N
                 others: list[dict] | None = None, required: str | None = None) -> str:
     blocks = []
     for n, r in enumerate(rounds):
-        lines = "\n".join(f"- {x['text']} ({x['source']})" for x in r)
+        # No source labels: the model copies them into its fake.
+        lines = "\n".join(f"- {x['text']}" for x in r)
         extra = ""
         if notes and notes.get(n):
             extra = f"\nYour last attempt for this round failed: {', '.join(notes[n])}."
