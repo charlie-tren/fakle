@@ -1,6 +1,7 @@
 {
  "date": "2026-10-11",
- "normal": [
+ "providers": {},
+ "rounds": [
   {
    "headlines": [
     {
@@ -104,33 +105,6 @@
   {
    "headlines": [
     {
-     "text": "Ukraine hit by deadly Russian strikes as 'thanks' for Trump diesel deal, Zelenskyy says",
-     "source": "The Guardian - World",
-     "url": "https://www.theguardian.com/world/2026/oct/10/ukraine-russia-strikes-war-trump-diesel-deal-zelenskyy"
-    },
-    {
-     "text": "Coalition Files Emergency Motion to Stop Trump FCC From Unleashing Media Consolidation Spree",
-     "source": "Common Dreams (US, left)",
-     "url": "https://www.commondreams.org/news/trump-fcc-tv-consolidation-2678069354"
-    },
-    {
-     "text": "Officials say the new plan will be reviewed again later after more talks w4",
-     "source": "",
-     "url": ""
-    },
-    {
-     "text": "Germany sticks to Russia sanctions after Trump diesel deal",
-     "source": "Deutsche Welle",
-     "url": "https://www.dw.com/en/germany-sticks-to-russia-sanctions-after-trump-diesel-deal/live-79627811?maca=en-rss-en-all-1573-rdf"
-    }
-   ],
-   "fake": 2
-  }
- ],
- "trump": [
-  {
-   "headlines": [
-    {
      "text": "Trump slams Zelenskyy, says Ukraine should elect new president",
      "source": "Deutsche Welle",
      "url": "https://www.dw.com/en/trump-slams-zelenskyy-says-ukraine-should-elect-new-president/a-79629740?maca=en-rss-en-all-1573-rdf"
@@ -152,107 +126,6 @@
     }
    ],
    "fake": 2
-  },
-  {
-   "headlines": [
-    {
-     "text": "Trump says Ukraine should get a new president as he blames Zelenskyy for US diesel prices",
-     "source": "Associated Press",
-     "url": "https://news.google.com/rss/articles/CBMingFBVV95cUxOVE9mQmhMWU5BTVNON25zTDhzTlBzU2VKMDBpa3FmcTI2NE5qNWJYRUx1c2dEdk9kTjhoQm5naDZXQTJKUmRaMDJ4WVhvSklpclRXUGxZSl9USUY4SkN2WTFMaHo1bVVDWGJzS1FGWVV6YlRkNlJ5ZVdaUmp2WUd5eUZKbFZWQXdCcVNzNkZEX01YUXZxeHBXZUlTaXdYQQ?oc=5"
-    },
-    {
-     "text": "Officials say the new plan will be reviewed again later after more talks this year w1",
-     "source": "",
-     "url": ""
-    },
-    {
-     "text": "Trump says Russia to immediately supply diesel to U.S. after talks with Putin",
-     "source": "The Hindu (International)",
-     "url": "https://www.thehindu.com/news/international/trump-says-russia-to-immediately-supply-diesel-to-us-after-talks-with-putin/article71565812.ece"
-    },
-    {
-     "text": "Who is Sally Yates? Cornell rape-review pick was fired by Trump after refusing to defend travel ban",
-     "source": "Fox News (US, right)",
-     "url": "https://www.foxnews.com/politics/who-sally-yates-cornell-rape-review-pick-fired-trump-refusing-defend-travel-ban"
-    }
-   ],
-   "fake": 1
-  },
-  {
-   "headlines": [
-    {
-     "text": "Officials say the new plan will be reviewed again later after more talks w2",
-     "source": "",
-     "url": ""
-    },
-    {
-     "text": "Pope Leo condemns death penalty as Trump mulls livestreamed execution",
-     "source": "Reuters",
-     "url": "https://news.google.com/rss/articles/CBMisAFBVV95cUxONUJFWFpWRFI1UEd3NDVNdjZkSkV3akwwd2lDb3IyaFdSenBkWllzSkxhYUdJUF9FS1NKQWZhcExmU1Z3ZkNWNlc3aVVlc2pTNFQyTnhfa0pZVVZIMzdDLWZ1R1lDUjcyUkVFRVJ0bmRvNkRaeGRDZzVQbHZGNmxBNnpPMndkZ250ZHNQYlJXUnh4WG4yWE9HU1cyZmdackJkXzJfTUw3VW1QT1ZpcHNvZg?oc=5"
-    },
-    {
-     "text": "Russian attacks kill 20 in Ukraine after Trump strikes diesel deal with Putin",
-     "source": "The Hindu (International)",
-     "url": "https://www.thehindu.com/news/international/russian-attacks-kill-11-in-ukraine-after-trump-strikes-diesel-deal-with-putin/article71567786.ece"
-    },
-    {
-     "text": "Katie Zacharia hits ground running, promises Trump diesel deal delivers cheaper gas for Americans",
-     "source": "Fox News (US, right)",
-     "url": "https://www.foxnews.com/media/incoming-press-chief-hits-ground-running-promises-trump-diesel-deal-delivers-cheaper-gas-americans"
-    }
-   ],
-   "fake": 0
-  },
-  {
-   "headlines": [
-    {
-     "text": "Putin reveals Iran's peace stance to Trump in stunning move",
-     "source": "Agence France-Presse",
-     "url": "https://news.google.com/rss/articles/CBMi0gFBVV95cUxNRHQwNV9rWldKVkJiajEwZHp0NG9iMlI5MVVPbUt3bkdWdi1PZHhpUHBNb1FTVlg2dXJXWWVXWEdPenhEY3NUU3RhQ0tteXJRQjdobWx6RlZfM0w1Z1JXUDB5US1hVGd3QUNTOHBlUGN3WmNoNUlRUXM5YkFtRzA4ZDVFUFZmNkltTER0TUp6SFAyQ2xjb1VDaUVwSUtNVzMtTDVSbElTZWcxYnU0R09WWjd3ZkFLYTdJVUZfblkyNlRkVjdrYUxfdkV1RWN3ZVd4ZWfSAdIBQVVfeXFMTUR0MDVfa1pXSlZCYmoxMGR6dDRvYjJSOTFVT21Ld25HVnYtT2R4aVBwTW9RU1ZYNnVyV1llV1hHT3p4RGNzVFN0YUNLbXlyUUI3aG1sekZWXzNMNWdSV1AweVEtYVRnd0FDUzhwZVBjd1pjaDVJUVFzOWJBbUcwOGQ1RVBWZjZJbUxEdE1KekhQMkNsY29VQ2lFcElLTVczLUw1UmxJU2VnMWJ1NEdPVlo3d2ZBS2E3SVVGX25ZMjZUZFY3a2FMX3ZFdUVjd2VXeGVn?oc=5"
-    },
-    {
-     "text": "Delhi protests, Trump's Russia diesel deal and Panama quake",
-     "source": "Reuters",
-     "url": "https://news.google.com/rss/articles/CBMiiwFBVV95cUxNOUF4MjIzS0hpa2YzS2oweWNYUjNWNlJxX0hjZnEtbmYwNXI4Um5KWExyYThsUUp3R09YWEhRWXQ4UUc4eFFCNExhd3hKZFpFVGpocFl6ZUVMdjNULU5zMHo2THN4M3RaYU9UbC1HdmVqcXFrb3JYTmdpVlJlZlNWRVVUSGp1RGlZWTQ0?oc=5"
-    },
-    {
-     "text": "ABC News quietly republishes gutted version of story on Trump sons it had deleted without explanation",
-     "source": "Fox News (US, right)",
-     "url": "https://www.foxnews.com/media/abc-news-quietly-republishes-gutted-version-story-trump-sons-had-deleted-without-explanation"
-    },
-    {
-     "text": "Officials say the new plan will be reviewed again later after more w3",
-     "source": "",
-     "url": ""
-    }
-   ],
-   "fake": 3
-  },
-  {
-   "headlines": [
-    {
-     "text": "Ukraine hit by deadly Russian strikes as 'thanks' for Trump diesel deal, Zelenskyy says",
-     "source": "The Guardian - World",
-     "url": "https://www.theguardian.com/world/2026/oct/10/ukraine-russia-strikes-war-trump-diesel-deal-zelenskyy"
-    },
-    {
-     "text": "Coalition Files Emergency Motion to Stop Trump FCC From Unleashing Media Consolidation Spree",
-     "source": "Common Dreams (US, left)",
-     "url": "https://www.commondreams.org/news/trump-fcc-tv-consolidation-2678069354"
-    },
-    {
-     "text": "Germany sticks to Russia sanctions after Trump diesel deal",
-     "source": "Deutsche Welle",
-     "url": "https://www.dw.com/en/germany-sticks-to-russia-sanctions-after-trump-diesel-deal/live-79627811?maca=en-rss-en-all-1573-rdf"
-    },
-    {
-     "text": "Officials say the new plan will be reviewed again later after more talks w4",
-     "source": "",
-     "url": ""
-    }
-   ],
-   "fake": 3
   }
- ],
- "provider": "stub"
+ ]
 }

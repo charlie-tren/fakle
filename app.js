@@ -1,22 +1,18 @@
 (function () {
   "use strict";
-  var mode = new URLSearchParams(location.search).get("mode") === "trump" ? "trump" : "normal";
   var $ = function (id) { return document.getElementById(id); };
   var store = {
     get: function (k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
     set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
   };
-  var PROGRESS = "fakle:" + mode + ":progress";
-  var STATS = "fakle:" + mode + ":stats";
+  var PROGRESS = "fakle:progress";
+  var STATS = "fakle:stats";
 
-  var state = { mode: mode, date: null, picks: [], done: false };
+  var state = { date: null, picks: [], done: false };
   window.fakleState = state;
   var rounds = null;
   var current = 0;
 
-  document.querySelectorAll(".modes a").forEach(function (a) {
-    if (a.dataset.mode === mode) a.setAttribute("aria-current", "page");
-  });
 
   // The F-A-K-L-E wordmark is the progress row: one letter per round, in the header
   // while playing and large on the end screen.
@@ -118,7 +114,7 @@
     var squares = rounds.map(function (r, i) {
       return String.fromCodePoint(state.picks[i] === r.fake ? 0x1F3AF : 0x1F921);
     }).join("");
-    $("share-text").textContent = "Fakle" + (mode === "trump" ? " Trump" : "") + " " +
+    $("share-text").textContent = "Fakle " +
       Number(d[2]) + "/" + Number(d[1]) + " " + s + "/" + rounds.length + "\n" + squares;
     var st = recordStats();
     paintLetters();
@@ -140,7 +136,7 @@
   }
 
   $("share").addEventListener("click", function () {
-    var t = $("share-text").textContent + "\nhttps://charlietrenorden.com/fakle/" + (mode === "trump" ? "?mode=trump" : "");
+    var t = $("share-text").textContent + "\nhttps://charlietrenorden.com/fakle/";
     var say = function (ok) { $("share").textContent = ok ? "Copied" : "Copy failed"; };
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(t).then(function () { say(true); }, function () { say(copyFallback(t)); });
@@ -173,7 +169,7 @@
   }
 
   fetch("puzzle.json", { cache: "no-cache" }).then(function (r) { return r.json(); }).then(function (p) {
-    rounds = p[mode];
+    rounds = p.rounds;
     state.date = p.date;
     if (!rounds || !fresh(p.date)) { $("none").hidden = false; return; }
     var saved = store.get(PROGRESS);

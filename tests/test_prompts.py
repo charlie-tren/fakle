@@ -98,3 +98,9 @@ def test_fake_prompt_gives_a_word_range_not_a_single_target():
     r = [{"text": "one two three four five six seven eight nine ten", "source": "X", "url": ""}] * 3
     p = prompts.fake_prompt([r])
     assert "Length: between 7 and 13 words." in p
+
+
+
+def test_pick_prompt_and_parse_take_a_round_count():
+    assert "Group them into 2 rounds" in prompts.pick_prompt(POOL, rounds=2)
+    assert prompts.parse_pick(json.dumps({"rounds": [[0, 1, 2], [3, 4, 5]]}), 40, rounds=2) == [[0, 1, 2], [3, 4, 5]]

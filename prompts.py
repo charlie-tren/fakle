@@ -74,10 +74,10 @@ Other real headlines from today (for names only, not phrasing):
 {others}"""
 
 
-def pick_prompt(pool: list[dict], required: str | None = None) -> str:
+def pick_prompt(pool: list[dict], required: str | None = None, rounds: int = PICK_ROUNDS) -> str:
     lines = "\n".join(f"{i}. {x['text']}" for i, x in enumerate(pool))
     focus = TRUMP_FOCUS if required == "trump" else ""
-    return PICK.format(n=PICK_ROUNDS * PER, rounds=PICK_ROUNDS, per=PER, lines=lines, focus=focus)
+    return PICK.format(n=rounds * PER, rounds=rounds, per=PER, lines=lines, focus=focus)
 
 
 SHORTLIST = """You are helping pick headlines for Fakle, a daily game whose whole point is to
@@ -111,11 +111,12 @@ def parse_shortlist(raw, n: int) -> list[int]:
     return out
 
 
-def parse_pick(raw, pool_len: int) -> list[list[int]]:
+def parse_pick(raw, pool_len: int, rounds: int = PICK_ROUNDS) -> list[list[int]]:
+    want = rounds
     d = llm.extract_json(raw)
     rounds = d.get("rounds") if isinstance(d, dict) else None
-    if not isinstance(rounds, list) or len(rounds) != PICK_ROUNDS:
-        raise ValueError(f"expected {PICK_ROUNDS} rounds")
+    if not isinstance(rounds, list) or len(rounds) != want:
+        raise ValueError(f"expected {want} rounds")
     if any(not isinstance(r, list) or len(r) != PER for r in rounds):
         raise ValueError(f"each round needs {PER}")
     flat = [i for r in rounds for i in r]

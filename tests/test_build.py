@@ -15,7 +15,8 @@ def stub(fakes_by_call):
 
     def gen(prompt):
         if "most absurd" in prompt:
-            return json.dumps({"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17]]}), "stub"
+            k = int(re.search(r"Group them into (\d+) rounds", prompt).group(1))
+            return json.dumps({"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17]][:k]}), "stub"
         out = fakes_by_call[calls["fake"]]
         calls["fake"] += 1
         n = len(re.findall(r"^Round \d+:", prompt, re.M))
@@ -79,7 +80,7 @@ def test_small_pool_gives_none_without_calling_model():
 
 def test_main_skips_when_today_already_built(tmp_path, capsys):
     out = tmp_path / "puzzle.json"
-    out.write_text(json.dumps({"date": "2026-10-11", "normal": [{"x": 1}], "trump": [{"x": 1}]}))
+    out.write_text(json.dumps({"date": "2026-10-11", "rounds": [{"x": 1}] * 5}))
     assert build.main(["--date", "2026-10-11", "--local", str(tmp_path), "--out", str(out)]) == 0
     assert "already built" in capsys.readouterr().out
 
@@ -185,26 +186,6 @@ def test_allegation_headlines_are_never_picked_as_reals():
     assert "Police arrest" not in seen[0]
 
 
-def test_main_rebuilds_only_the_missing_mode(tmp_path, monkeypatch):
-    (tmp_path / "2026-10-11.json").write_text(json.dumps(FIX), encoding="utf-8")
-    kept = {"headlines": [], "fake": 0, "marker": "kept"}
-    out = tmp_path / "puzzle.json"
-    out.write_text(json.dumps({"date": "2026-10-11", "normal": [kept], "trump": None,
-                               "providers": {"normal": "gemini", "trump": None}}))
-    asked = []
-
-    def fake_build(date, history, gen, modes=("normal", "trump")):
-        asked.append(tuple(modes))
-        return {"date": date, "normal": None, "trump": [{"headlines": [], "fake": 1}],
-                "providers": {"trump": "stub"}}
-    monkeypatch.setattr(build, "build", fake_build)
-    assert build.main(["--date", "2026-10-11", "--local", str(tmp_path), "--out", str(out)]) == 0
-    got = json.loads(out.read_text())
-    assert asked == [("trump",)]
-    assert got["normal"] == [kept] and got["trump"] == [{"headlines": [], "fake": 1}]
-    assert got["providers"] == {"normal": "gemini", "trump": "stub"}
-
-
 def test_same_story_detects_shared_content_words():
     assert build.same_story("Trump says Ukraine needs new president",
                             "Time for Ukraine to get new president, says Trump", "trump")
@@ -283,16 +264,11 @@ def test_structure_clash_ignores_the_required_word():
 def test_force_rebuilds_both_modes(tmp_path, monkeypatch):
     (tmp_path / "2026-10-11.json").write_text(json.dumps(FIX), encoding="utf-8")
     out = tmp_path / "puzzle.json"
-    out.write_text(json.dumps({"date": "2026-10-11", "normal": [{"x": 1}], "trump": [{"x": 1}]}))
-    asked = []
-
-    def fake_build(date, history, gen, modes=("normal", "trump")):
-        asked.append(tuple(modes))
-        return {"date": date, "normal": [{"new": 1}], "trump": [{"new": 2}], "providers": {}}
-    monkeypatch.setattr(build, "build", fake_build)
+    out.write_text(json.dumps({"date": "2026-10-11", "rounds": [{"x": 1}] * 5}))
+    monkeypatch.setattr(build, "build", lambda date, history, gen: {
+        "date": date, "normal": [{"n": i} for i in range(5)], "trump": [{"t": 1}], "providers": {}})
     assert build.main(["--date", "2026-10-11", "--local", str(tmp_path), "--out", str(out), "--force"]) == 0
-    assert asked == [("normal", "trump")]
-    assert json.loads(out.read_text())["normal"] == [{"new": 1}]
+    assert json.loads(out.read_text())["rounds"][-1] == {"t": 1}
 
 
 
@@ -374,3 +350,43 @@ def test_a_failed_chunk_is_skipped_not_fatal():
         raise AssertionError("one failed chunk sank the mode")
     except (IndexError, ValueError):
         pass   # the stub has no fakes to give; reaching the fake stage is the point
+
+
+
+def _main_with(tmp_path, monkeypatch, normal, trump):
+    (tmp_path / "2026-10-11.json").write_text(json.dumps(FIX), encoding="utf-8")
+    out = tmp_path / "puzzle.json"
+    monkeypatch.setattr(build, "build", lambda date, history, gen: {
+        "date": date, "normal": normal, "trump": trump, "providers": {"normal": "a", "trump": "b"}})
+    code = build.main(["--date", "2026-10-11", "--local", str(tmp_path), "--out", str(out)])
+    return code, (json.loads(out.read_text()) if out.exists() else None)
+
+
+def test_one_game_four_general_rounds_then_the_trump_round(tmp_path, monkeypatch):
+    code, got = _main_with(tmp_path, monkeypatch, [{"n": i} for i in range(5)], [{"t": 1}])
+    assert code == 0 and got["rounds"] == [{"n": 0}, {"n": 1}, {"n": 2}, {"n": 3}, {"t": 1}]
+    assert "normal" not in got and "trump" not in got
+
+
+def test_no_trump_round_means_five_general_rounds(tmp_path, monkeypatch):
+    code, got = _main_with(tmp_path, monkeypatch, [{"n": i} for i in range(5)], None)
+    assert code == 0 and got["rounds"] == [{"n": i} for i in range(5)]
+
+
+def test_no_general_rounds_means_no_puzzle(tmp_path, monkeypatch):
+    code, got = _main_with(tmp_path, monkeypatch, None, [{"t": 1}])
+    assert code == 1 and got is None
+
+
+def test_trump_round_is_a_single_round_with_a_spare_picked():
+    t = trump_pool()
+    day = [x["text"] for x in pool.build_pool(FIX["articles"])] + [x["text"] for x in t]
+    seen = []
+    base, _ = stub([trump_fakes(rounds_of(t))])
+
+    def gen(prompt):
+        seen.append(prompt)
+        return base(prompt)
+    rounds = build.make_mode(t, gen, "s", day=day, required="trump", count=1)
+    assert rounds and len(rounds) == 1
+    assert "Group them into 2 rounds" in seen[0]

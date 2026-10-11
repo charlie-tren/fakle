@@ -8,10 +8,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f);line-hei
 
 .bar{display:flex;align-items:center;gap:14px;padding-top:22px}
 .bar h1{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);margin:0}
-.modes{display:flex;background:rgba(255,255,255,.18);border-radius:999px;padding:3px;gap:2px;margin-left:auto}
-.modes a{color:#fff;font-weight:700;font-size:.95rem;padding:4px 15px;border-radius:999px;text-decoration:none}
-.modes a[aria-current]{background:#fff;color:var(--bg)}
-.back{color:#fff;font-weight:600;font-size:.95rem;text-decoration:none;white-space:nowrap}
+.back{margin-left:auto;color:#fff;font-weight:600;font-size:.95rem;text-decoration:none;white-space:nowrap}
 
 /* The wordmark is the progress row: one letter per round. */
 .letters{list-style:none;display:flex;gap:6px;padding:0;margin:0}
@@ -53,7 +50,6 @@ main{padding-top:34px;padding-bottom:40px}
 @media (max-width:520px){
   .bar{gap:7px;padding-top:16px}.back .label{display:none}
   /* Thumb-sized: the pills and the back arrow were 26px and 22px tall. */
-  .modes a{padding:0 11px;font-size:.88rem;min-height:38px;display:inline-flex;align-items:center}
   .back{min-height:40px;min-width:32px;display:inline-flex;align-items:center;justify-content:flex-end}
   .bar .letters{gap:3px}.bar .letters li{width:28px;height:28px;border-radius:7px;border-width:2px;font-size:1.05rem;padding-top:3px}
   main{padding-top:22px}.headline{font-size:1.12rem;padding:16px 18px 12px;gap:6px}.headline a{font-size:.82rem}

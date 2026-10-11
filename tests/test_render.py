@@ -87,18 +87,9 @@ def test_share_text_has_no_headline_words(site, browser):
     play_all(pg)
     share = pg.locator("#share-text").text_content()
     puzzle = json.loads((ROOT / "tests/fixtures/puzzle.json").read_text(encoding="utf-8"))
-    words = {w.lower() for r in puzzle["normal"] for h in r["headlines"] for w in h["text"].split() if len(w) > 4}
+    words = {w.lower() for r in puzzle["rounds"] for h in r["headlines"] for w in h["text"].split() if len(w) > 4}
     assert share.startswith("Fakle")
     assert not any(w in share.lower() for w in words)
-
-
-def test_trump_mode_has_own_progress(site, browser):
-    pg, _ = page_at(browser, site)
-    pg.locator(".headline").first.click()
-    pg.goto(site + "?mode=trump")
-    pg.wait_for_selector(".headline")
-    assert pg.evaluate("window.fakleState.mode") == "trump"
-    assert pg.evaluate("window.fakleState.picks.length") == 0
 
 
 def test_progress_resumes_same_day_and_resets_next_day(site, browser):
@@ -107,7 +98,7 @@ def test_progress_resumes_same_day_and_resets_next_day(site, browser):
     pg.reload()
     pg.wait_for_selector(".headline")
     assert pg.evaluate("window.fakleState.picks.length") == 1
-    pg.evaluate("""localStorage.setItem('fakle:normal:progress',
+    pg.evaluate("""localStorage.setItem('fakle:progress',
         JSON.stringify({date:'2026-10-10', picks:[0,0,0,0,0]}))""")
     pg.reload()
     pg.wait_for_selector(".headline")
@@ -130,7 +121,7 @@ def test_plays_when_storage_throws(site, browser):
 def test_missing_mode_says_so(site, browser):
     ctx = context(browser)
     pg = ctx.new_page()
-    pg.route("**/puzzle.json", lambda r: r.fulfill(json={"date": "2026-10-11", "normal": None, "trump": None}))
+    pg.route("**/puzzle.json", lambda r: r.fulfill(json={"date": "2026-10-11", "rounds": None}))
     pg.goto(site)
     pg.wait_for_selector("#none", state="visible")
 
@@ -216,11 +207,11 @@ def test_letter_row_spells_the_name_and_tracks_picks(site, browser):
     assert letters.all_inner_texts() == ["F", "A", "K", "L", "E"]
     assert "now" in letters.nth(0).get_attribute("class")
     puzzle = json.loads((ROOT / "tests/fixtures/puzzle.json").read_text(encoding="utf-8"))
-    fake = puzzle["normal"][0]["fake"]
+    fake = puzzle["rounds"][0]["fake"]
     pg.locator(".headline").nth(fake).click()
     assert "right" in letters.nth(0).get_attribute("class")
     pg.locator("#next").click()
-    pg.locator(".headline").nth((puzzle["normal"][1]["fake"] + 1) % 4).click()
+    pg.locator(".headline").nth((puzzle["rounds"][1]["fake"] + 1) % 4).click()
     assert "wrong" in letters.nth(1).get_attribute("class")
 
 
@@ -260,6 +251,15 @@ def test_own_icon_set():
 
 def test_phone_tap_targets_are_thumb_sized(site, browser):
     pg, _ = page_at(browser, site, 390)
-    for sel in (".modes a", ".back"):
+    for sel in (".back",):
         for el in pg.locator(sel).all():
             assert el.bounding_box()["height"] >= 36, sel
+
+
+
+def test_one_game_no_mode_toggle(site, browser):
+    assert 'class="modes"' not in (ROOT / "index.html").read_text(encoding="utf-8")
+    pg, _ = page_at(browser, site + "?mode=trump")
+    assert pg.locator(".headline").count() == 4
+    puzzle = json.loads((ROOT / "tests/fixtures/puzzle.json").read_text(encoding="utf-8"))
+    assert pg.locator(".headline").first.inner_text() == puzzle["rounds"][0]["headlines"][0]["text"]
