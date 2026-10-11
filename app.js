@@ -45,6 +45,7 @@
     li.appendChild(text);
     if (picked === undefined) {
       li.tabIndex = 0;
+      li.setAttribute("role", "button");
       li.addEventListener("click", function () { pick(j); });
       li.addEventListener("keydown", function (e) {
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(j); }
@@ -88,7 +89,9 @@
   }
 
   $("next").addEventListener("click", function () {
-    if (current + 1 >= rounds.length) finish(); else render(current + 1);
+    if (current + 1 >= rounds.length) return finish();
+    render(current + 1);
+    $("round").querySelector(".headline").focus();
   });
 
   function recordStats() {
@@ -120,15 +123,33 @@
     countdown();
   }
 
+  function copyFallback(t) {
+    var ta = document.createElement("textarea");
+    ta.value = t;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+    return ok;
+  }
+
   $("share").addEventListener("click", function () {
     var t = $("share-text").textContent + "\nhttps://charlietrenorden.com/fakle/" + (mode === "trump" ? "?mode=trump" : "");
-    if (navigator.clipboard) navigator.clipboard.writeText(t).then(function () { $("share").textContent = "Copied"; });
+    var say = function (ok) { $("share").textContent = ok ? "Copied" : "Copy failed"; };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).then(function () { say(true); }, function () { say(copyFallback(t)); });
+    } else {
+      say(copyFallback(t));
+    }
   });
 
   function countdown() {
     var syd = new Date(new Date().toLocaleString("en-US", { timeZone: "Australia/Sydney" }));
     var next = new Date(syd);
-    next.setHours(5, 30, 0, 0);
+    next.setHours(9, 0, 0, 0);   // the build lands between about 05:00 and 09:00
     if (next <= syd) next.setDate(next.getDate() + 1);
     var mins = Math.round((next - syd) / 60000);
     $("countdown").textContent = "Next Fakle in " + Math.floor(mins / 60) + "h " + (mins % 60) + "m";

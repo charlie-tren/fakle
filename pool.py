@@ -65,7 +65,7 @@ def build_pool(articles: list[dict], trump: bool = False) -> list[dict]:
         text = clean_title(a.get("title", ""))
         if not usable(text):
             continue
-        if trump and "trump" not in text.lower():
+        if trump and "trump" not in words(text):
             continue
         w = words(text)
         if any(_jaccard(w, s) >= DUPE for s in seen):

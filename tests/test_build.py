@@ -123,16 +123,17 @@ def test_fake_prompt_carries_unpicked_headlines():
 
 
 def test_provider_failure_in_one_mode_keeps_the_other():
-    # Normal mode takes one pick call and one fake call; every call after that
-    # (Trump mode) fails the way a spent quota does.
+    # Once normal mode has had its fakes written, every call after that (Trump mode)
+    # fails the way a spent quota does.
     p = pool.build_pool(FIX["articles"])
     base, _ = stub([good_fakes(rounds_of(p))])
-    calls = []
+    state = {"faked": False}
 
     def gen(prompt):
-        calls.append(prompt)
-        if len(calls) > 2:
+        if state["faked"]:
             raise build.llm.NoProvider("quota")
+        if "hardest to believe" not in prompt:
+            state["faked"] = True
         return base(prompt)
     result = build.build("2026-10-11", FIX, gen)
     assert result["normal"] is not None
@@ -213,3 +214,36 @@ def test_pick_prompt_is_capped_for_groq_token_limit():
     except build.llm.NoProvider:
         pass
     assert seen2[0] == seen[0]
+
+
+
+def test_same_story_detects_shared_content_words():
+    assert build.same_story("Trump says Ukraine needs new president",
+                            "Time for Ukraine to get new president, says Trump", "trump")
+    assert not build.same_story("Trump lifts sanctions on Russian diesel",
+                                "Trump picks new press secretary", "trump")
+
+
+def test_pick_with_a_same_story_round_is_retried():
+    p = [{"text": t, "source": "X", "url": ""} for t in [
+        "Ukraine needs a new president, envoy says", "Ukraine president must change, envoy says",
+        "Camels win prize at a county fair", "Moroccan king says migration model hit limit",
+        "Alberta woman planks for five hours", "China unveils robot to breed wheat",
+        "Japanese brewer designs wobbly beer glass", "Polka king shares Oktoberfest memories",
+        "Qing ceramics damaged in museum display", "Peru elects mayor named after dictators",
+        "Feathers turned into fertiliser by pupils", "Baby dinosaur fossil puzzles scientists",
+        "Dolly Parton records a Welsh cover", "Rogue AI agent gives police a tip",
+        "Horseback archery thrills two riders", "Ragebait named youth word of the year",
+        "Grenade brought to police headquarters"]]
+    bad = {"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]]}
+    good = {"rounds": [[0, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]}
+    answers = [bad, good]
+    gen = lambda prompt: (json.dumps(answers.pop(0)), "stub")
+    assert build._pick(p, gen) == good["rounds"]
+
+
+def test_pick_keeps_a_same_story_round_rather_than_nothing():
+    p = [{"text": f"Ukraine president story number {i}, envoy says", "source": "X", "url": ""} for i in range(20)]
+    bad = {"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]]}
+    gen = lambda prompt: (json.dumps(bad), "stub")
+    assert build._pick(p, gen) == bad["rounds"]

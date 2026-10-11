@@ -52,3 +52,10 @@ def test_non_http_urls_are_dropped():
             {"title": "China and EU strike deal to halve hybrid exports", "source": "Y", "url": "https://ok.example/a"}]
     p = pool.build_pool(arts)
     assert [x["url"] for x in p] == ["", "https://ok.example/a"]
+
+
+
+def test_trump_mode_matches_the_word_not_a_substring():
+    arts = [{"title": "Bluey trumps Peppa in the ratings race again", "source": "X", "url": ""},
+            {"title": "Trump says the diesel deal is done for now", "source": "Y", "url": ""}]
+    assert [x["text"] for x in pool.build_pool(arts, trump=True)] == ["Trump says the diesel deal is done for now"]

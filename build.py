@@ -19,14 +19,33 @@ FAKE_TRIES = 3
 MODES = {"normal": None, "trump": "trump"}   # mode -> word every headline in it carries
 
 
-def _pick(p, gen):
-    for _ in range(2):
+STOP = {"says", "said", "after", "over", "with", "from", "that", "this", "will", "into",
+        "about", "their", "they", "have", "more", "than", "what", "when", "amid", "year",
+        "years", "first", "back", "just", "make", "makes", "could", "would", "should"}
+
+
+def same_story(a: str, b: str, required: str | None = None) -> bool:
+    """Two content words in common reads as one story, and two reals on one story
+    vouch for each other, leaving the fake as the odd one out."""
+    def content(t):
+        return {w for w in pool.words(t) if len(w) >= 4 and w not in STOP and w != required}
+    return len(content(a) & content(b)) >= 2
+
+
+def _pick(p, gen, required=None):
+    best = None
+    for _ in range(3):
         raw, _prov = gen(prompts.pick_prompt(p))
         try:
-            return prompts.parse_pick(raw, len(p))
+            rounds = prompts.parse_pick(raw, len(p))
         except ValueError:
             continue
-    return None
+        best = rounds
+        if not any(same_story(p[a]["text"], p[b]["text"], required)
+                   for r in rounds for i, a in enumerate(r) for b in r[i + 1:]):
+            return rounds
+    # A same-story round is a weaker puzzle, not a broken one: better than no puzzle.
+    return best
 
 
 def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
@@ -40,7 +59,7 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
     if len(p) > PICK_CAP:
         keep = sorted(random.Random(seed).sample(range(len(p)), PICK_CAP))
         p = [p[i] for i in keep]
-    idx = _pick(p, gen)
+    idx = _pick(p, gen, required)
     if idx is None:
         return None
     rounds = [[p[i] for i in r] for r in idx]

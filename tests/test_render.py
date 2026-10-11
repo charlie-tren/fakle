@@ -164,3 +164,43 @@ def test_yesterdays_puzzle_still_plays_early_morning(site, browser):
 def test_yesterdays_puzzle_retired_by_afternoon(site, browser):
     pg = _with_date(browser, site, "2026-10-10", "2026-10-11T15:00:00+11:00")
     pg.wait_for_selector("#none", state="visible")
+
+
+
+def test_focus_moves_to_first_headline_after_next(site, browser):
+    pg, _ = page_at(browser, site)
+    assert pg.locator(".headline").first.get_attribute("role") == "button"
+    pg.locator(".headline").first.click()
+    pg.locator("#next").click()
+    assert pg.evaluate("document.activeElement.classList.contains('headline')")
+
+
+def test_countdown_points_at_nine_sydney(site, browser):
+    pg, _ = page_at(browser, site)
+    play_all(pg)
+    assert pg.locator("#countdown").inner_text() == "Next Fakle in 24h 0m"
+
+
+def _copy_with(browser, site, clipboard_ok, exec_ok):
+    ctx = context(browser)
+    ctx.add_init_script("""
+      Object.defineProperty(navigator, 'clipboard', {value: {writeText: () =>
+        %s}});
+      document.execCommand = () => %s;""" % (
+        "Promise.resolve()" if clipboard_ok else "Promise.reject(new Error('denied'))",
+        "true" if exec_ok else "false"))
+    pg = ctx.new_page()
+    pg.goto(site)
+    pg.wait_for_selector(".headline")
+    play_all(pg)
+    pg.locator("#share").click()
+    pg.wait_for_function("document.getElementById('share').textContent !== 'Copy result'")
+    return pg.locator("#share").inner_text()
+
+
+def test_copy_falls_back_when_clipboard_denied(site, browser):
+    assert _copy_with(browser, site, False, True) == "Copied"
+
+
+def test_copy_says_so_when_it_cannot(site, browser):
+    assert _copy_with(browser, site, False, False) == "Copy failed"
