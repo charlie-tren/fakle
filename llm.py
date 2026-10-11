@@ -34,7 +34,7 @@ def _groq(prompt: str, temperature: float, model: str) -> str:
     if not key:
         raise NoProvider("GROQ_API_KEY not set")
     r = requests.post(GROQ_URL, headers={"Authorization": f"Bearer {key}"},
-                      json={"model": model, "temperature": temperature,
+                      json={"model": model, "temperature": temperature, "reasoning_effort": "low",
                             "response_format": {"type": "json_object"},
                             "messages": [{"role": "user", "content": prompt}]},
                       timeout=TIMEOUT)

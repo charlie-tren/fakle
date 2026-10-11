@@ -42,3 +42,21 @@ def test_gemini_is_tried_once_per_model():
 def test_cloudflare_is_not_a_rung():
     # Its allowance is shared with Ghostwriters and Photocopy.
     assert all(name != "cloudflare" for name, _ in llm.LADDER)
+
+
+def test_groq_asks_for_low_reasoning(monkeypatch):
+    # gpt-oss in JSON mode returned an empty generation at default effort (11/10/2026).
+    sent = {}
+
+    class R:
+        status_code = 200
+        def json(self):
+            return {"choices": [{"message": {"content": "{}"}}]}
+
+    def post(url, headers, json, timeout):
+        sent.update(json)
+        return R()
+    monkeypatch.setenv("GROQ_API_KEY", "k")
+    monkeypatch.setattr(llm.requests, "post", post)
+    llm._groq("p", 0.9, "openai/gpt-oss-120b")
+    assert sent["reasoning_effort"] == "low"
