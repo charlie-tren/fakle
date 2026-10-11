@@ -203,7 +203,10 @@ def build(date: str, history: dict, gen) -> dict:
             used["p"] = prov
             return raw, prov
         try:
-            result[name] = make_mode(pool.build_pool(arts, trump=name == "trump"), tracked,
+            # The general rounds leave Trump to his own round, or the same story turns up twice.
+            src = pool.build_pool(arts, trump=True) if MODES[name] else \
+                [x for x in everyone if "trump" not in pool.words(x["text"])]
+            result[name] = make_mode(src, tracked,
                                      f"{date}:{name}", day=day, required=MODES[name],
                                      others_pool=everyone if MODES[name] else None,
                                      count=TRUMP_ROUNDS if MODES[name] else prompts.ROUNDS)

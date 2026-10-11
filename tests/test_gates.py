@@ -137,3 +137,12 @@ def test_a_different_story_with_one_shared_word_passes():
              "UAE school pupils turn feathers into fertiliser as plans to combat waste take flight"]
     fake = "Peru town pays residents to adopt abandoned vending machines"
     assert "same story" not in gates.check_fake(fake, reals, reals)
+
+
+
+def test_same_story_matches_word_forms():
+    reals = ["Alberta woman, 61, breaks her own world record by planking for 5 hours",
+             "UN calls US plans to livestream execution 'abhorrent'",
+             "Candidate named Hitler Mussolini elected mayor in Peru"]
+    fake = "Canadian health board bans plank competitions longer than three hours nationwide"
+    assert "same story" in gates.check_fake(fake, reals, reals)

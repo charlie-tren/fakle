@@ -37,12 +37,14 @@ STORY_STOP = {"says", "said", "after", "over", "with", "from", "that", "this", "
 
 
 def _content(t: str, required: str | None) -> set[str]:
-    """Words that carry the story, plurals folded so "camels" meets "camel"."""
+    """Words that carry the story, compared by their first five letters so "camels" meets
+    "camel" and "planking" meets "plank"."""
     out = set()
     for w in words(t):
         if len(w) < 4 or w in STORY_STOP or w == required:
             continue
-        out.add(w[:-1] if len(w) > 4 and w.endswith("s") else w)
+        w = w[:-1] if len(w) > 4 and w.endswith("s") else w
+        out.add(w[:5])
     return out
 
 

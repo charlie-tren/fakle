@@ -407,3 +407,16 @@ def test_fake_keeps_sentence_case_when_its_round_does():
              "Trump Strikes 'Deal With the Devil' for Russian Diesel"]
     got = build.match_case("Norway fits reindeer with reflective antler tape", reals)
     assert got == "Norway fits reindeer with reflective antler tape"
+
+
+
+def test_general_rounds_never_use_trump_headlines():
+    seen = []
+
+    def gen(prompt):
+        seen.append(prompt)
+        raise build.llm.NoProvider("stop at the first pick")
+    build.build("2026-10-11", FIX, gen)
+    general = seen[0]
+    lines = [l for l in general.splitlines() if l[:1].isdigit()]
+    assert lines and not any("trump" in pool.words(l) for l in lines)
