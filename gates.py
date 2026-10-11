@@ -21,8 +21,9 @@ def _overlap(a: set, b: set) -> float:
 
 
 def _proper_nouns(t: str) -> set[str]:
+    # Tokenised with words() so "Social's" splits the same way as the day's vocabulary.
     toks = re.findall(r"[A-Za-z][\w']*", t)
-    return {w.lower() for w in toks[1:] if w[0].isupper()}
+    return {w for tok in toks[1:] if tok[0].isupper() for w in words(tok) if len(w) > 1}
 
 
 def check_fake(fake: str, reals: list[str], day_titles: list[str]) -> list[str]:

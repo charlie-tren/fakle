@@ -31,3 +31,8 @@ def test_new_proper_noun_fails():
 
 def test_known_proper_noun_passes_case_insensitively():
     assert "new name" not in gates.check_fake("Putin offers Spain a diesel deal over migration", REALS, DAY)
+
+
+def test_possessive_name_from_the_day_is_known():
+    day = DAY + ["Trump picks Truth Social's Katie Zacharia as White House press secretary"]
+    assert "new name" not in gates.check_fake("Truth Social's Katie Zacharia joins China trade talks", REALS, day)
