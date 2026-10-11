@@ -90,10 +90,12 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
         shortlist = []
         for c in range(0, len(p), CHUNK):
             chunk = p[c:c + CHUNK]
-            raw, _prov = gen(prompts.shortlist_prompt(chunk, NOMINATE, required))
             try:
+                raw, _prov = gen(prompts.shortlist_prompt(chunk, NOMINATE, required))
                 shortlist += [chunk[i] for i in prompts.parse_shortlist(raw, len(chunk))[:NOMINATE]]
-            except ValueError:
+            except (ValueError, llm.NoProvider) as exc:
+                # One chunk lost costs that chunk's nominees, not the day's puzzle.
+                print(f"{seed}: chunk {c // CHUNK + 1} skipped: {exc}")
                 continue
         p = shortlist
         if len(p) < prompts.PICK_ROUNDS * prompts.PER:

@@ -355,3 +355,22 @@ def test_a_stubborn_round_is_replaced_by_the_spare():
     assert rounds and len(rounds) == 5
     texts = [h["text"] for r in rounds for h in r["headlines"]]
     assert not any("Hargreaves" in t for t in texts)
+
+
+def test_a_failed_chunk_is_skipped_not_fatal():
+    p = [{"text": f"Village number {i} elects a goat to its council again", "source": "X", "url": ""} for i in range(450)]
+    calls = {"n": 0}
+
+    def gen(prompt):
+        if "nominate" in prompt:
+            calls["n"] += 1
+            if calls["n"] == 2:
+                raise build.llm.NoProvider("minute limit")
+            return json.dumps({"picks": list(range(10))}), "stub"
+        return json.dumps({"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17]]}), "stub"
+    try:
+        build.make_mode(p, gen, "s")
+    except build.llm.NoProvider:
+        raise AssertionError("one failed chunk sank the mode")
+    except (IndexError, ValueError):
+        pass   # the stub has no fakes to give; reaching the fake stage is the point

@@ -98,3 +98,12 @@ def test_groq_caps_the_reply(monkeypatch):
     monkeypatch.setattr(llm.requests, "post", lambda url, headers, json, timeout: (sent.update(json), _Resp(200, {"choices": [{"message": {"content": "{}"}}]}))[1])
     llm._groq("p", 0.9, "openai/gpt-oss-120b")
     assert sent["max_completion_tokens"] <= 1500
+
+
+def test_groq_waits_up_to_three_times_for_the_minute_window(monkeypatch):
+    tpm = {"error": {"message": "Rate limit reached on tokens per minute (TPM). Please try again in 2.5s."}}
+    replies = [_Resp(429, tpm), _Resp(429, tpm), _Resp(429, tpm), _Resp(200, {"choices": [{"message": {"content": "{}"}}]})]
+    monkeypatch.setenv("GROQ_API_KEY", "k")
+    monkeypatch.setattr(llm.requests, "post", lambda *a, **k: replies.pop(0))
+    monkeypatch.setattr(llm.time, "sleep", lambda s: None)
+    assert llm._groq("p", 0.9, "openai/gpt-oss-120b") == "{}"
