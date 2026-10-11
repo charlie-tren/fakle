@@ -113,5 +113,5 @@ def test_fake_prompt_shows_the_spin_off_it_must_not_write():
 
 def test_no_invented_quote_from_a_named_person():
     p = prompts.fake_prompt([POOL[0:3]])
-    assert "never put invented words in a named person's mouth" in p
+    assert "Never put invented words in a named person's mouth" in p
     assert any("unnamed" in s for s in prompts.SHAPES if "quote" in s)
