@@ -326,3 +326,7 @@ def test_headlines_set_in_a_news_serif(site, browser):
     family = pg.evaluate("getComputedStyle(document.querySelector('.headline')).fontFamily")
     assert "Libre Caslon Condensed" in family
     assert "Libre+Caslon+Condensed" in (ROOT / "index.html").read_text(encoding="utf-8")
+
+
+def test_canonical_url():
+    assert '<link rel="canonical" href="https://charlietrenorden.com/fakle/">' in (ROOT / "index.html").read_text(encoding="utf-8")
