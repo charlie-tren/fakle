@@ -440,3 +440,9 @@ def test_two_chunks_still_nominate_enough_for_a_full_pick():
     final = seen[-1]
     assert "most absurd" in final, "never reached the final pick"
     assert final.count("Village number") >= 2 * 18
+
+
+
+def test_each_build_carries_an_id(tmp_path, monkeypatch):
+    code, got = _main_with(tmp_path, monkeypatch, [{"n": i} for i in range(5)], [{"t": 1}])
+    assert code == 0 and got.get("id")

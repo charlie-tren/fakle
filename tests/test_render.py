@@ -355,3 +355,13 @@ def test_no_label_when_the_day_has_no_trump_round(site, browser):
         pg.locator(".headline").first.click()
         pg.locator("#next").click()
     assert pg.locator("#round-label").is_hidden()
+
+
+
+def test_progress_from_an_earlier_build_of_the_same_day_is_dropped(site, browser):
+    pg, _ = page_at(browser, site)
+    pg.evaluate("""localStorage.setItem('fakle:progress',
+        JSON.stringify({date:'2026-10-11', id:'an-earlier-build', picks:[0,0]}))""")
+    pg.reload()
+    enter(pg)
+    assert pg.evaluate("window.fakleState.picks.length") == 0

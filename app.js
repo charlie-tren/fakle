@@ -79,7 +79,7 @@
   function pick(j) {
     if (state.picks[current] !== undefined) return;
     state.picks[current] = j;
-    store.set(PROGRESS, { date: state.date, picks: state.picks });
+    store.set(PROGRESS, { date: state.date, id: state.id, picks: state.picks });
     render(current);
     $("next").focus();
   }
@@ -207,7 +207,10 @@
     state.date = p.date;
     if (!rounds || !fresh(p.date)) { $("none").hidden = false; return; }
     var saved = store.get(PROGRESS);
-    if (saved && saved.date === p.date && Array.isArray(saved.picks)) state.picks = saved.picks.slice(0, rounds.length);
+    state.id = p.id || "";
+    if (saved && saved.date === p.date && (saved.id || "") === state.id && Array.isArray(saved.picks)) {
+      state.picks = saved.picks.slice(0, rounds.length);
+    }
     if (state.picks.length >= rounds.length) finish(); else showHome();
   }).catch(function () { $("none").hidden = false; });
 })();

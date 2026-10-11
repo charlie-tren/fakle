@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import random
 import re
@@ -246,7 +247,10 @@ def main(argv=None) -> int:
         return 1
     keep = prompts.ROUNDS - (TRUMP_ROUNDS if new.get("trump") else 0)
     rounds = new["normal"][:keep] + (new.get("trump") or [])
-    result = {"date": a.date, "rounds": rounds, "trump_round": bool(new.get("trump")),
+    # A forced rebuild changes the rounds on the same date: the id tells the page that
+    # progress saved against the earlier build no longer applies.
+    built = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    result = {"date": a.date, "id": built, "rounds": rounds, "trump_round": bool(new.get("trump")),
               "providers": new.get("providers", {})}
     out.write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"{a.date}: {len(rounds)} rounds, Trump round {'yes' if result['trump_round'] else 'no'}")
