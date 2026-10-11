@@ -19,6 +19,13 @@ The point is to show how insane the world is. Every rule below serves that.
 - **Fakes must not share a structure.** By the third day every fake read "X does Y amid Z"
   and was guessable. Each round gets its own shape (`prompts.SHAPES`) and
   `build.structure_clash` sends back repeats of an opening or a connector.
+- **A fake must not be the same story as a real one.** "Ruto proposes camel milk tax" beside
+  the real Ruto milk headline was the example. `gates.check_fake` compares content-word stems
+  against its round (two shared) and the whole day (three shared).
+- **One game, Trump last.** Five rounds: four general (no Trump headlines in them) and one
+  all-Trump round with the day's craziest Trump stories. No mode toggle.
+- **A fake follows its round's case** (`build.match_case`): an all-sentence-case fake beside
+  Title Case reals was a tell.
 - **A fake that turns out to be true is the worst failure.** Fakes steer clear of every
   real story of the day; the gates in `gates.py` (allegations, invented names, overlap) are
   in code, not only in the prompt.
