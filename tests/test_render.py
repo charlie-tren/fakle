@@ -250,3 +250,9 @@ def test_share_uses_target_and_clown(site, browser):
     share = pg.locator("#share-text").text_content()
     assert chr(0x1F3AF) in share or chr(0x1F921) in share
     assert chr(0x1F7E9) not in share and chr(0x1F7E5) not in share
+
+
+def test_own_icon_set():
+    html = (ROOT / "index.html").read_text(encoding="utf-8")
+    for f in ("favicon.svg", "favicon.ico", "favicon-192.png", "apple-touch-icon.png"):
+        assert f'href="{f}"' in html and (ROOT / f).exists()
