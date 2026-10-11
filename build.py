@@ -13,6 +13,7 @@ import pool
 import prompts
 
 MIN_POOL = 15
+OTHERS = 80      # unpicked headlines shown to the fake writer as a source of names
 FAKE_TRIES = 3
 
 
@@ -33,6 +34,8 @@ def make_mode(p: list[dict], gen, seed: str) -> list[dict] | None:
     if idx is None:
         return None
     rounds = [[p[i] for i in r] for r in idx]
+    picked = {i for r in idx for i in r}
+    others = [x for i, x in enumerate(p) if i not in picked][:OTHERS]
     day = [x["text"] for x in p]
     fakes: dict[int, str] = {}
     notes: dict[int, list[str]] = {}
@@ -40,7 +43,8 @@ def make_mode(p: list[dict], gen, seed: str) -> list[dict] | None:
     for _ in range(FAKE_TRIES):
         # Only the rounds still failing go back, each with the reasons it failed.
         raw, _prov = gen(prompts.fake_prompt([rounds[t] for t in todo],
-                                             {k: notes[t] for k, t in enumerate(todo) if t in notes}))
+                                             {k: notes[t] for k, t in enumerate(todo) if t in notes},
+                                             others))
         try:
             got = prompts.parse_fakes(raw, len(todo))
         except ValueError:
@@ -75,11 +79,18 @@ def build(date: str, history: dict, gen) -> dict:
         provider["used"] = prov
         return raw, prov
 
-    arts = history["articles"]
+    def mode(trump: bool, name: str):
+        # A spent quota in one mode must not cost the other its puzzle.
+        try:
+            return make_mode(pool.build_pool(history["articles"], trump=trump), tracked, f"{date}:{name}")
+        except llm.NoProvider as exc:
+            print(f"{date} {name}: no provider: {str(exc)[:160]}")
+            return None
+
     return {
         "date": date,
-        "normal": make_mode(pool.build_pool(arts), tracked, f"{date}:normal"),
-        "trump": make_mode(pool.build_pool(arts, trump=True), tracked, f"{date}:trump"),
+        "normal": mode(False, "normal"),
+        "trump": mode(True, "trump"),
         "provider": provider["used"],
     }
 

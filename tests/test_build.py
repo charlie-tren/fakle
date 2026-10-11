@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 import build
@@ -17,7 +18,7 @@ def stub(fakes_by_call):
             return json.dumps({"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]]}), "stub"
         out = fakes_by_call[calls["fake"]]
         calls["fake"] += 1
-        n = prompt.count("Round ")
+        n = len(re.findall(r"^Round \d+:", prompt, re.M))
         return json.dumps({"fakes": out[:n]}), "stub"
     return gen, calls
 
@@ -96,5 +97,35 @@ def test_thin_trump_pool_drops_only_trump_mode():
     fakes = good_fakes([p[i:i + 3] for i in range(0, 15, 3)])
     gen, _ = stub([fakes])
     result = build.build("2026-10-11", no_trump, gen)
+    assert result["normal"] is not None
+    assert result["trump"] is None
+
+
+def test_fake_prompt_carries_unpicked_headlines():
+    p = pool.build_pool(FIX["articles"])
+    seen = []
+    base, _ = stub([good_fakes([p[i:i + 3] for i in range(0, 15, 3)])])
+
+    def gen(prompt):
+        seen.append(prompt)
+        return base(prompt)
+    build.make_mode(p, gen, "s")
+    fake_prompts = [x for x in seen if "hardest to believe" not in x]
+    assert fake_prompts and all(p[15]["text"] in x for x in fake_prompts)
+
+
+def test_provider_failure_in_one_mode_keeps_the_other():
+    # Normal mode takes one pick call and one fake call; every call after that
+    # (Trump mode) fails the way a spent quota does.
+    p = pool.build_pool(FIX["articles"])
+    base, _ = stub([good_fakes([p[i:i + 3] for i in range(0, 15, 3)])])
+    calls = []
+
+    def gen(prompt):
+        calls.append(prompt)
+        if len(calls) > 2:
+            raise build.llm.NoProvider("quota")
+        return base(prompt)
+    result = build.build("2026-10-11", FIX, gen)
     assert result["normal"] is not None
     assert result["trump"] is None

@@ -38,3 +38,9 @@ def test_parse_fakes():
     assert prompts.parse_fakes(json.dumps({"fakes": ["a b c d e", "f g h i j"]}), 2) == ["a b c d e", "f g h i j"]
     with pytest.raises(ValueError):
         prompts.parse_fakes(json.dumps({"fakes": ["only one"]}), 2)
+
+
+def test_fake_prompt_lists_other_headlines_as_name_source():
+    p = prompts.fake_prompt([POOL[0:3]], others=[POOL[20], POOL[21]])
+    assert "Headline number 20" in p and "Headline number 21" in p
+    assert "different event" in p

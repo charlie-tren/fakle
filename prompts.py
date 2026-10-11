@@ -23,16 +23,22 @@ Each round has three real headlines. Write ONE new headline per round that a
 careful reader could not tell apart from the three beside it.
 
 Rules:
+- Each fake reports a different event from all three in its round. Never combine,
+  rephrase or borrow phrases from them: a fake stitched from its neighbours is the
+  first thing a player spots.
 - Same length, register, punctuation and capitalisation style as its three.
 - Same spelling convention as its three (American if they are American).
 - Plausible, a little strange, never a joke.
-- Only name people, places and organisations that appear somewhere in the
-  real headlines given below.
+- Only name people, places and organisations that appear somewhere in the real
+  headlines below, including the list of other real headlines from today.
 - Never claim anyone committed a crime, did anything sexual, is ill or died.
 
 Reply with JSON only: {{"fakes": ["...", ...]}} with one string per round, in order.
 
-{rounds}"""
+{rounds}
+
+Other real headlines from today (for names only, not phrasing):
+{others}"""
 
 
 def pick_prompt(pool: list[dict]) -> str:
@@ -53,7 +59,8 @@ def parse_pick(raw, pool_len: int) -> list[list[int]]:
     return rounds
 
 
-def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = None) -> str:
+def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = None,
+                others: list[dict] | None = None) -> str:
     blocks = []
     for n, r in enumerate(rounds):
         lines = "\n".join(f"- {x['text']} ({x['source']})" for x in r)
@@ -61,7 +68,8 @@ def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = N
         if notes and notes.get(n):
             extra = f"\nYour last attempt for this round failed: {', '.join(notes[n])}."
         blocks.append(f"Round {n + 1}:\n{lines}{extra}")
-    return FAKE.format(rounds="\n\n".join(blocks))
+    other = "\n".join(f"- {x['text']}" for x in (others or [])) or "(none)"
+    return FAKE.format(rounds="\n\n".join(blocks), others=other)
 
 
 def parse_fakes(raw, n: int) -> list[str]:
