@@ -33,7 +33,7 @@ TRUMP_FOCUS = ("Every headline here involves Trump: pick the craziest things Tru
 # "all the fake ones have the same kind of structure - easy to guess after a while").
 SHAPES = [
     "short and punchy, with no trailing clause",
-    "built around a quote in quotation marks",
+    "built around a quote in quotation marks from an unnamed speaker (officials, a spokesperson, residents)",
     "opens with a number or a statistic",
     "a town, council, school or business doing something strange",
     "an official ban, ruling or rule that sounds absurd",
@@ -68,6 +68,8 @@ Rules:
 - Only name people, places and organisations that appear somewhere in the real
   headlines below, including the list of other real headlines from today.
 - Never claim anyone committed a crime, did anything sexual, is ill or died.
+- Never put invented words in a named person's mouth: a quote comes from an unnamed
+  speaker, never from a real person by name.
 
 Reply with JSON only: {{"fakes": ["...", ...]}} with one string per round, in order.
 

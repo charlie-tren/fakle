@@ -109,3 +109,9 @@ def test_pick_prompt_and_parse_take_a_round_count():
 def test_fake_prompt_shows_the_spin_off_it_must_not_write():
     p = prompts.fake_prompt([POOL[0:3]])
     assert "plank competitions" in p and "different topic" in p
+
+
+def test_no_invented_quote_from_a_named_person():
+    p = prompts.fake_prompt([POOL[0:3]])
+    assert "never put invented words in a named person's mouth" in p
+    assert any("unnamed" in s for s in prompts.SHAPES if "quote" in s)
