@@ -43,6 +43,29 @@ def same_story(a: str, b: str, required: str | None = None) -> bool:
 CONNECTORS = (" amid ", " as ", " ahead of ", " after ", " in bid to ", " despite ")
 
 
+SMALL = {"a", "an", "the", "of", "in", "on", "at", "to", "for", "and", "or", "but", "by", "as"}
+
+
+def _is_title_case(t: str) -> bool:
+    long = [w for w in t.split() if len(w.strip("'\"")) >= 4]
+    return bool(long) and sum(w.strip("'\"")[:1].isupper() for w in long) / len(long) >= 0.7
+
+
+def match_case(fake: str, reals: list[str]) -> str:
+    """Real outlets write in Title Case or sentence case; a fake always in sentence case
+    beside a Title Case round is a tell. Follow the round's majority."""
+    if sum(_is_title_case(r) for r in reals) * 2 <= len(reals):
+        return fake
+    out = []
+    for i, w in enumerate(fake.split()):
+        lead = len(w) - len(w.lstrip("'\""))
+        core = w[lead:]
+        if i == 0 or core.lower() not in SMALL:
+            core = core[:1].upper() + core[1:]
+        out.append(w[:lead] + core)
+    return " ".join(out)
+
+
 def structure_clash(fakes: list[str], required: str | None = None) -> set[int]:
     """Indices of fakes that share an opening or a connector with an earlier one."""
     seen_open, seen_conn, clash = set(), set(), set()
@@ -139,7 +162,7 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
                 notes[t] = why
                 still.append(t)
             else:
-                fakes[t] = pool.clean_title(f)
+                fakes[t] = match_case(pool.clean_title(f), [x["text"] for x in rounds[t]])
         # Five fakes with one shape are guessable by the third: send back any that
         # repeats an opening or a connector already used today.
         order = sorted(fakes)

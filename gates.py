@@ -31,6 +31,21 @@ jersey mexico york north carolina dakota ohio oklahoma oregon pennsylvania rhode
 tennessee texas utah vermont virginia washington west wisconsin wyoming""".split())
 
 
+STORY_STOP = {"says", "said", "after", "over", "with", "from", "that", "this", "will", "into",
+              "about", "their", "they", "have", "more", "than", "what", "when", "amid", "year",
+              "years", "first", "back", "just", "make", "makes", "could", "would", "should", "new"}
+
+
+def _content(t: str, required: str | None) -> set[str]:
+    """Words that carry the story, plurals folded so "camels" meets "camel"."""
+    out = set()
+    for w in words(t):
+        if len(w) < 4 or w in STORY_STOP or w == required:
+            continue
+        out.add(w[:-1] if len(w) > 4 and w.endswith("s") else w)
+    return out
+
+
 def _overlap(a: set, b: set) -> float:
     return len(a & b) / min(len(a), len(b)) if a and b else 0.0
 
@@ -65,4 +80,11 @@ def check_fake(fake: str, reals: list[str], day_titles: list[str], required: str
     mine = _proper_nouns(fake) - {required}
     if any(len(mine & _proper_nouns(r)) >= 2 for r in reals):
         fails.append("borrows from its round")
+    # The same story by its content words: two shared with a real in its own round, or
+    # three with any headline of the day (Charlie, 11/10/2026: "Ruto proposes camel milk
+    # tax" beside the real Ruto milk headline).
+    c = _content(fake, required)
+    if any(len(c & _content(r, required)) >= 2 for r in reals) or \
+            any(len(c & _content(t, required)) >= 3 for t in day_titles):
+        fails.append("same story")
     return fails

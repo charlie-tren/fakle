@@ -390,3 +390,20 @@ def test_trump_round_is_a_single_round_with_a_spare_picked():
     rounds = build.make_mode(t, gen, "s", day=day, required="trump", count=1)
     assert rounds and len(rounds) == 1
     assert "Group them into 2 rounds" in seen[0]
+
+
+
+def test_fake_takes_title_case_when_its_round_does():
+    reals = ["Trump Strikes 'Deal With the Devil' for Russian Diesel",
+             "Coalition Files Emergency Motion to Stop Media Spree",
+             "Daily Wire Overcomes Shutdown Attempt in Montana"]
+    got = build.match_case("Norway fits reindeer with reflective antler tape", reals)
+    assert got == "Norway Fits Reindeer With Reflective Antler Tape"
+
+
+def test_fake_keeps_sentence_case_when_its_round_does():
+    reals = ["Candidate named Hitler Mussolini elected mayor in Peru",
+             "UAE school pupils turn feathers into fertiliser",
+             "Trump Strikes 'Deal With the Devil' for Russian Diesel"]
+    got = build.match_case("Norway fits reindeer with reflective antler tape", reals)
+    assert got == "Norway fits reindeer with reflective antler tape"

@@ -318,3 +318,11 @@ def test_played_today_opens_on_the_result_and_can_review(site, browser):
     for _ in range(5):
         pg.locator("#next").click()
     assert pg.locator("#end").is_visible()
+
+
+
+def test_headlines_set_in_a_news_serif(site, browser):
+    pg, _ = page_at(browser, site)
+    family = pg.evaluate("getComputedStyle(document.querySelector('.headline')).fontFamily")
+    assert "Libre Caslon Condensed" in family
+    assert "Libre+Caslon+Condensed" in (ROOT / "index.html").read_text(encoding="utf-8")

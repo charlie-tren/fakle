@@ -58,13 +58,20 @@ body.at-home .bar .letters{visibility:hidden}
 .streak,.countdown{color:#e4dcff;font-size:1rem;margin:8px 0 0}
 #none{color:#fff;font-weight:700;font-size:1.4rem;text-align:center;margin-top:60px}
 
+/* Headlines set as headlines: a condensed news serif under a thick-and-thin rule, the
+   outlet in small caps on the reveal (H2a, chosen 11/10/2026). */
+.headline{font-family:"Libre Caslon Condensed",Georgia,serif;font-weight:700;font-size:2.1rem;line-height:1.02;letter-spacing:-.012em;padding:20px 26px 20px;gap:14px}
+.headline .text{text-wrap:pretty}
+.headline::before{content:"";align-self:stretch;height:7px;border-top:3px solid currentColor;border-bottom:1px solid currentColor}
+.headline a,.headline .tag{font-family:"Libre Caslon Condensed",Georgia,serif;font-weight:700;font-size:.95rem;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;color:var(--link)}
+.headline .tag{background:none;color:#fff;padding:0;border-radius:0}
 @media (max-width:640px){.round{grid-template-columns:1fr;grid-auto-rows:auto;gap:16px}.headline{min-height:0}}
 @media (max-width:520px){
   .bar{gap:7px;padding-top:16px}.back .label{display:none}
   /* Thumb-sized: the pills and the back arrow were 26px and 22px tall. */
   .back{min-height:40px;min-width:32px;display:inline-flex;align-items:center;justify-content:flex-end}
   .bar .letters{gap:3px}.bar .letters li{width:28px;height:28px;border-radius:7px;border-width:2px;font-size:1.05rem;padding-top:3px}
-  main{padding-top:22px}.headline{font-size:1.12rem;padding:16px 18px 12px;gap:6px}.headline a{font-size:.82rem}
+  main{padding-top:22px}.headline{font-size:1.6rem;padding:14px 18px 15px;gap:10px}.headline a,.headline .tag{font-size:.82rem}
   #end .letters{gap:8px;margin-top:40px}#end .letters li{width:56px;height:56px;border-radius:14px;font-size:2rem}
   #home .tiles{gap:8px}#home .tiles li{width:56px;height:56px;border-radius:14px;font-size:2rem}#home .line{font-size:1.25rem}
 }

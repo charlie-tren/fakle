@@ -7,7 +7,7 @@ DAY = REALS + ["Trump strikes diesel deal with Putin", "Mexico court finds three
 
 
 def test_good_fake_passes():
-    assert gates.check_fake("Spain asks UN to fund migration cooperation with China", REALS, DAY) == []
+    assert gates.check_fake("Spain asks UN to fund umbrella museum in China", REALS, DAY) == []
 
 
 def test_copy_of_a_real_fails():
@@ -109,3 +109,31 @@ def test_required_word_does_not_count_as_borrowing():
              "Trump slams Zelenskyy over diesel prices"]
     fake = "Trump orders gold-plated golf carts for Norway visit"
     assert "borrows from its round" not in gates.check_fake(fake, reals, reals, required="trump")
+
+
+
+def test_fake_on_the_same_story_as_a_real_in_its_round_fails():
+    # Charlie, 11/10/2026: "make sure they're not too similar like this".
+    reals = ["Camels, goats, sheep: Ruto urges milk diversification as prices hit Sh85 a litre",
+             "Japanese brewer designs 'wobbly' beer glass to encourage responsible drinking",
+             "Candidate named Hitler Mussolini elected mayor in Peru"]
+    fake = "Ruto proposes camel milk tax to curb rising dairy prices across Kenya"
+    day = reals + ["Kenya dairy farmers face drought"]
+    assert "same story" in gates.check_fake(fake, reals, day)
+
+
+def test_fake_on_the_same_story_as_any_headline_today_fails():
+    reals = ["Japanese brewer designs 'wobbly' beer glass to encourage responsible drinking",
+             "Candidate named Hitler Mussolini elected mayor in Peru",
+             "UAE school pupils turn feathers into fertiliser as plans to combat waste take flight"]
+    day = reals + ["Kenya camel herders switch to selling milk as dairy prices soar"]
+    fake = "Kenya taxes camel milk as dairy prices keep climbing"
+    assert "same story" in gates.check_fake(fake, reals, day)
+
+
+def test_a_different_story_with_one_shared_word_passes():
+    reals = ["Japanese brewer designs 'wobbly' beer glass to encourage responsible drinking",
+             "Candidate named Hitler Mussolini elected mayor in Peru",
+             "UAE school pupils turn feathers into fertiliser as plans to combat waste take flight"]
+    fake = "Peru town pays residents to adopt abandoned vending machines"
+    assert "same story" not in gates.check_fake(fake, reals, reals)
