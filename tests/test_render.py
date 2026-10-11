@@ -17,6 +17,9 @@ NOW = "2026-10-11T09:00:00+11:00"
 
 def context(browser, **kw):
     ctx = browser.new_context(**kw)
+    # The page must not depend on a third-party font server, and nor may its tests.
+    ctx.route("**/fonts.googleapis.com/**", lambda r: r.abort())
+    ctx.route("**/fonts.gstatic.com/**", lambda r: r.abort())
     ctx.add_init_script("""(() => { const T = new Date('%s').getTime(); const D = Date;
       class F extends D { constructor(...a) { super(...(a.length ? a : [T])); } static now() { return T; } }
       window.Date = F; })()""" % NOW)
@@ -141,6 +144,7 @@ def test_no_dashes_in_copy():
 
 def _with_date(browser, site, puzzle_date, now):
     ctx = browser.new_context()
+    ctx.route("**/fonts.googleapis.com/**", lambda r: r.abort())
     pg = ctx.new_page()
     pg.clock.set_fixed_time(now)
     data = json.loads((ROOT / "tests/fixtures/puzzle.json").read_text(encoding="utf-8"))
@@ -231,3 +235,10 @@ def test_end_screen_shows_the_big_letter_row(site, browser):
 
 def test_no_theme_toggle():
     assert 'id="theme"' not in (ROOT / "index.html").read_text(encoding="utf-8")
+
+
+
+def test_font_stylesheet_does_not_block_render():
+    html = (ROOT / "index.html").read_text(encoding="utf-8")
+    link = [l for l in html.splitlines() if "fonts.googleapis.com/css2" in l][0]
+    assert 'media="print"' in link and "onload=" in link

@@ -60,3 +60,41 @@ def test_groq_asks_for_low_reasoning(monkeypatch):
     monkeypatch.setattr(llm.requests, "post", post)
     llm._groq("p", 0.9, "openai/gpt-oss-120b")
     assert sent["reasoning_effort"] == "low"
+
+
+
+class _Resp:
+    def __init__(self, code, body):
+        self.status_code = code
+        self._body = body
+        self.text = str(body)
+
+    def json(self):
+        return self._body
+
+
+def test_groq_waits_out_a_per_minute_limit_once(monkeypatch):
+    replies = [_Resp(429, {"error": {"message": "Rate limit reached on tokens per minute (TPM). Please try again in 12.9s."}}),
+               _Resp(200, {"choices": [{"message": {"content": "{}"}}]})]
+    slept = []
+    monkeypatch.setenv("GROQ_API_KEY", "k")
+    monkeypatch.setattr(llm.requests, "post", lambda *a, **k: replies.pop(0))
+    monkeypatch.setattr(llm.time, "sleep", lambda s: slept.append(s))
+    assert llm._groq("p", 0.9, "openai/gpt-oss-120b") == "{}"
+    assert slept and 12.9 <= slept[0] <= 15
+
+
+def test_groq_does_not_wait_out_a_daily_limit(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "k")
+    monkeypatch.setattr(llm.requests, "post", lambda *a, **k: _Resp(429, {"error": {"message": "tokens per day (TPD). Please try again in 9m12s."}}))
+    monkeypatch.setattr(llm.time, "sleep", lambda s: (_ for _ in ()).throw(AssertionError("slept")))
+    with pytest.raises(llm.NoProvider):
+        llm._groq("p", 0.9, "openai/gpt-oss-120b")
+
+
+def test_groq_caps_the_reply(monkeypatch):
+    sent = {}
+    monkeypatch.setenv("GROQ_API_KEY", "k")
+    monkeypatch.setattr(llm.requests, "post", lambda url, headers, json, timeout: (sent.update(json), _Resp(200, {"choices": [{"message": {"content": "{}"}}]}))[1])
+    llm._groq("p", 0.9, "openai/gpt-oss-120b")
+    assert sent["max_completion_tokens"] <= 1500

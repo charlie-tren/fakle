@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import re
 import sys
 from pathlib import Path
 
@@ -16,6 +17,12 @@ MIN_POOL = 15
 PICK_CAP = 250   # Groq's free tier allows 12K tokens a minute; ~660 headlines is ~10K
 OTHERS = 100     # headlines shown to the fake writer as a source of names
 FAKE_TRIES = 5
+# Dropped before sampling a big pool, so the sample is dense in strange stories. Only a
+# filter on the full day: Trump mode's pool is small and its politics are the point.
+BORING = re.compile(
+    r"\b(shares?|stocks?|markets?|earnings|profit|revenue|investors?|gdp|inflation|interest rates?|"
+    r"budget|tariffs?|summit|talks|ceasefire|sanctions?|minister|parliament|election|poll|"
+    r"league|cup|coach|match|semi-final|final|quarterly|forecasts?)\b", re.I)
 MODES = {"normal": None, "trump": "trump"}   # mode -> word every headline in it carries
 
 
@@ -73,6 +80,9 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
     p = [x for x in p if not gates.ALLEGATION.search(x["text"])]
     if len(p) < MIN_POOL:
         return None
+    if len(p) > PICK_CAP:
+        lively = [x for x in p if not BORING.search(x["text"])]
+        p = lively if len(lively) >= MIN_POOL else p
     if len(p) > PICK_CAP:
         keep = sorted(random.Random(seed).sample(range(len(p)), PICK_CAP))
         p = [p[i] for i in keep]
@@ -154,7 +164,7 @@ def build(date: str, history: dict, gen, modes=tuple(MODES)) -> dict:
                                      others_pool=everyone if MODES[name] else None)
         except llm.NoProvider as exc:
             # A spent quota in one mode must not cost the other its puzzle.
-            print(f"{date} {name}: no provider: {str(exc)[:160]}")
+            print(f"{date} {name}: no provider: {exc}")
             result[name] = None
         result["providers"][name] = used["p"]
     return result
@@ -165,10 +175,12 @@ def main(argv=None) -> int:
     ap.add_argument("--date", default=pool.sydney_today())
     ap.add_argument("--local")
     ap.add_argument("--out", default="puzzle.json")
+    # Rebuild today's puzzle from scratch, e.g. after a change to the prompts.
+    ap.add_argument("--force", action="store_true")
     a = ap.parse_args(argv)
     out = Path(a.out)
     have = json.loads(out.read_text(encoding="utf-8")) if out.exists() else {}
-    if have.get("date") != a.date:
+    if have.get("date") != a.date or a.force:
         have = {}
     missing = [m for m in MODES if not have.get(m)]
     if not missing:

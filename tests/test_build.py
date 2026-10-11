@@ -292,3 +292,48 @@ def test_structure_clash_ignores_the_required_word():
     fakes = ["Trump says he will build a moon base",
              "Trump orders gold-plated golf carts for Air Force One"]
     assert build.structure_clash(fakes, required="trump") == set()
+
+
+def test_force_rebuilds_both_modes(tmp_path, monkeypatch):
+    (tmp_path / "2026-10-11.json").write_text(json.dumps(FIX), encoding="utf-8")
+    out = tmp_path / "puzzle.json"
+    out.write_text(json.dumps({"date": "2026-10-11", "normal": [{"x": 1}], "trump": [{"x": 1}]}))
+    asked = []
+
+    def fake_build(date, history, gen, modes=("normal", "trump")):
+        asked.append(tuple(modes))
+        return {"date": date, "normal": [{"new": 1}], "trump": [{"new": 2}], "providers": {}}
+    monkeypatch.setattr(build, "build", fake_build)
+    assert build.main(["--date", "2026-10-11", "--local", str(tmp_path), "--out", str(out), "--force"]) == 0
+    assert asked == [("normal", "trump")]
+    assert json.loads(out.read_text())["normal"] == [{"new": 1}]
+
+
+
+def test_boring_headlines_are_dropped_before_sampling_a_big_pool():
+    boring = [{"text": f"Shares in company {i} rise after quarterly earnings beat forecasts", "source": "X", "url": ""} for i in range(300)]
+    odd = [{"text": f"Town elects goat number {i} as honorary mayor for a week", "source": "X", "url": ""} for i in range(20)]
+    seen = []
+
+    def gen(prompt):
+        seen.append(prompt)
+        raise build.llm.NoProvider("stop after the pick")
+    try:
+        build.make_mode(boring + odd, gen, "s")
+    except build.llm.NoProvider:
+        pass
+    assert "goat number 19" in seen[0] and "Shares in company" not in seen[0]
+
+
+def test_small_pools_are_not_filtered_for_boredom():
+    p = [{"text": f"Trump says shares will rise again in week {i} of trading", "source": "X", "url": ""} for i in range(40)]
+    seen = []
+
+    def gen(prompt):
+        seen.append(prompt)
+        raise build.llm.NoProvider("stop")
+    try:
+        build.make_mode(p, gen, "s", required="trump")
+    except build.llm.NoProvider:
+        pass
+    assert "week 39" in seen[0]
