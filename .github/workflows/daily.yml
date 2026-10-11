@@ -5,6 +5,9 @@ name: daily-puzzle
 # Pages is deployed from this workflow, never from a commit: puzzle.json is not in git,
 # so yesterday's fakes are not left readable in the repo's public history. The current
 # file is fetched from the live site first, which is what the "already built" check reads.
+#
+# One job, so the page deploys even when the build fails (it then says there is no Fakle
+# today), and the last step turns the run red so the failure is still seen.
 on:
   schedule:
     - cron: "10 17 * * *"
@@ -24,8 +27,11 @@ concurrency:
   group: pages
   cancel-in-progress: false
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -34,6 +40,8 @@ jobs:
       - name: Fetch the live puzzle
         run: curl -sf https://charlietrenorden.com/fakle/puzzle.json -o puzzle.json || rm -f puzzle.json
       - name: Build
+        id: build
+        continue-on-error: true
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -48,12 +56,8 @@ jobs:
           ls -la _site
       - uses: actions/upload-pages-artifact@v5
         with: { path: _site }
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+      - name: Fail the run if the build failed
+        if: steps.build.outcome == 'failure'
+        run: exit 1
