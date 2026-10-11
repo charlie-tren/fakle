@@ -63,3 +63,26 @@ def test_fake_prompt_does_not_show_source_labels():
 def test_fake_prompt_steers_away_from_every_real_story():
     p = prompts.fake_prompt([POOL[0:3]], others=[POOL[20]])
     assert "never restate, paraphrase, extend or contradict" in p
+
+
+
+def test_pick_prompt_states_the_mission_and_the_bar():
+    p = prompts.pick_prompt(POOL)
+    assert "how strange the world is" in p
+    assert "Hitler Mussolini" in p          # the example he called really good
+    assert "boring" in p
+
+
+def test_trump_pick_prompt_asks_for_the_craziest():
+    assert "craziest" in prompts.pick_prompt(POOL, required="trump")
+    assert "Trump" in prompts.pick_prompt(POOL, required="trump")
+
+
+def test_fake_prompt_gives_each_round_a_different_shape():
+    p = prompts.fake_prompt([POOL[0:3], POOL[3:6], POOL[6:9]], seed="2026-10-11:normal")
+    shapes = [line for line in p.splitlines() if line.startswith("Shape for this round:")]
+    assert len(shapes) == 3 and len(set(shapes)) == 3
+
+
+def test_fake_prompt_carries_the_good_fake_example():
+    assert "misting poles" in prompts.fake_prompt([POOL[0:3]])

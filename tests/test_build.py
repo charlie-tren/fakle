@@ -14,7 +14,7 @@ def stub(fakes_by_call):
     calls = {"fake": 0}
 
     def gen(prompt):
-        if "hardest to believe" in prompt:
+        if "most absurd" in prompt:
             return json.dumps({"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]]}), "stub"
         out = fakes_by_call[calls["fake"]]
         calls["fake"] += 1
@@ -23,7 +23,9 @@ def stub(fakes_by_call):
     return gen, calls
 
 
-BASE = "Officials say the new plan will be reviewed again later after more talks this year".split()
+# No connectors ("after", "amid") and a numbered opening per round, so the stub's fakes
+# pass the cross-fake structure check the way distinct real fakes would.
+BASE = "officials say the new plan will be reviewed again later with more talks this year".split()
 
 
 def rounds_of(p):
@@ -38,7 +40,7 @@ def good_fakes(rounds_pool):
     out = []
     for i, r in enumerate(rounds_pool):
         n = round(sum(len(x["text"].split()) for x in r) / len(r))
-        out.append(" ".join(BASE[:n - 1] + [f"w{i}"]))
+        out.append(" ".join([str(i + 2)] + BASE[:n - 2] + [f"w{i}"]))
     return out
 
 
@@ -117,7 +119,7 @@ def test_fake_prompt_carries_unpicked_headlines():
         seen.append(prompt)
         return base(prompt)
     build.make_mode(p, gen, "s")
-    fake_prompts = [x for x in seen if "hardest to believe" not in x]
+    fake_prompts = [x for x in seen if "most absurd" not in x]
     first_unpicked = [x for x in p if not build.gates.ALLEGATION.search(x["text"])][15]
     assert fake_prompts and all(first_unpicked["text"] in x for x in fake_prompts)
 
@@ -132,7 +134,7 @@ def test_provider_failure_in_one_mode_keeps_the_other():
     def gen(prompt):
         if state["faked"]:
             raise build.llm.NoProvider("quota")
-        if "hardest to believe" not in prompt:
+        if "most absurd" not in prompt:
             state["faked"] = True
         return base(prompt)
     result = build.build("2026-10-11", FIX, gen)
@@ -269,9 +271,24 @@ def test_trump_fake_writer_sees_names_from_the_whole_day():
         seen.append(prompt)
         return base(prompt)
     build.make_mode(t, gen, "s", day=[x["text"] for x in everyone], required="trump", others_pool=everyone)
-    fake_prompt = [x for x in seen if "hardest to believe" not in x][0]
+    fake_prompt = [x for x in seen if "most absurd" not in x][0]
     assert any(h in fake_prompt for h in non_trump)
 
 
 def test_five_fake_attempts():
     assert build.FAKE_TRIES == 5
+
+
+
+def test_structure_clash_flags_repeated_openings_and_connectors():
+    fakes = ["Trump announces new plan for farms amid trade talks",
+             "Trump announces deal with China amid tariff fight",
+             "Dubai police launch robot traffic wardens",
+             "Mayor bans leaf blowers after noise complaints"]
+    assert build.structure_clash(fakes) == {1}
+
+
+def test_structure_clash_ignores_the_required_word():
+    fakes = ["Trump says he will build a moon base",
+             "Trump orders gold-plated golf carts for Air Force One"]
+    assert build.structure_clash(fakes, required="trump") == set()

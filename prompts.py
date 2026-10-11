@@ -6,23 +6,51 @@ import llm
 
 ROUNDS, PER = 5, 3
 
-PICK = """You are choosing headlines for a daily game. Players see four headlines,
-three real and one invented, and try to spot the invented one.
+PICK = """You are choosing headlines for Fakle, a daily game whose whole point is to show
+how strange the world is. Players see four headlines, three real and one invented, and
+try to spot the invented one.
 
-From the numbered real headlines below, choose the {n} that a reader would find
-hardest to believe are real: strange, surprising or absurd, but plainly true.
-Avoid deaths, disasters and violence. Group them into {rounds} rounds of {per}.
-Use each headline at most once. Each round's headlines are about three different stories.
+From the numbered real headlines below, choose the {n} most absurd, the ones a reader
+would least believe are real. The bar is "Candidate named Hitler Mussolini elected mayor
+in Peru": true, and barely believable. {focus}
+
+Leave out anything boring: ordinary politics, markets, sport results, routine business,
+diplomacy and policy announcements, however important. Leave out deaths, disasters and
+violence. If a headline would not make someone say "wait, really?", it does not belong.
+
+Group them into {rounds} rounds of {per}. Use each headline at most once. Each round's
+headlines are about three different stories.
 
 Reply with JSON only: {{"rounds": [[i, j, k], ...]}}
 
 {lines}"""
 
+TRUMP_FOCUS = ("Every headline here involves Trump: pick the craziest things Trump said, "
+               "did or was caught up in today, not the routine politics.")
+
+# One shape per round, so the five fakes do not share a structure (Charlie, 11/10/2026:
+# "all the fake ones have the same kind of structure - easy to guess after a while").
+SHAPES = [
+    "short and punchy, under nine words, with no trailing clause",
+    "built around a quote in quotation marks",
+    "opens with a number or a statistic",
+    "a town, council, school or business doing something strange",
+    "an official ban, ruling or rule that sounds absurd",
+    "an animal, an object or a food at the centre of the story",
+    "a person with an unusual record, job or habit",
+]
+
 FAKE = """You are writing the invented headline for each round of a daily game.
 Each round has three real headlines. Write ONE new headline per round that a
 careful reader could not tell apart from the three beside it.
 
+A good fake is plausible, specific and quietly odd, as strange as the real ones beside
+it. Example of a fake that worked: "Singapore installs smart misting poles along walkways
+to combat afternoon heat".
+
 Rules:
+- Never end with an "amid ...", "as ...", "ahead of ..." or "after ..." clause. That
+  crutch is how earlier fakes gave themselves away.
 - Each fake reports a different event from all three in its round. Never combine,
   rephrase or borrow phrases from them: a fake stitched from its neighbours is the
   first thing a player spots.
@@ -45,9 +73,10 @@ Other real headlines from today (for names only, not phrasing):
 {others}"""
 
 
-def pick_prompt(pool: list[dict]) -> str:
+def pick_prompt(pool: list[dict], required: str | None = None) -> str:
     lines = "\n".join(f"{i}. {x['text']}" for i, x in enumerate(pool))
-    return PICK.format(n=ROUNDS * PER, rounds=ROUNDS, per=PER, lines=lines)
+    focus = TRUMP_FOCUS if required == "trump" else ""
+    return PICK.format(n=ROUNDS * PER, rounds=ROUNDS, per=PER, lines=lines, focus=focus)
 
 
 def parse_pick(raw, pool_len: int) -> list[list[int]]:
@@ -64,20 +93,24 @@ def parse_pick(raw, pool_len: int) -> list[list[int]]:
 
 
 def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = None,
-                others: list[dict] | None = None, required: str | None = None) -> str:
+                others: list[dict] | None = None, required: str | None = None,
+                seed: str = "") -> str:
     blocks = []
+    start = sum(map(ord, seed)) % len(SHAPES)
     for n, r in enumerate(rounds):
         # No source labels: the model copies them into its fake.
         lines = "\n".join(f"- {x['text']}" for x in r)
         extra = ""
         if notes and notes.get(n):
             extra = f"\nYour last attempt for this round failed: {', '.join(notes[n])}."
-        blocks.append(f"Round {n + 1}:\n{lines}{extra}")
+        shape = f"\nShape for this round: {SHAPES[(start + n) % len(SHAPES)]}."
+        blocks.append(f"Round {n + 1}:\n{lines}{shape}{extra}")
     other = "\n".join(f"- {x['text']}" for x in (others or [])) or "(none)"
     text = FAKE.format(rounds="\n\n".join(blocks), others=other)
     if required:
         # Every real in the round carries it, so a fake without it is the answer.
-        text = text.replace("Rules:\n", f"Rules:\n- Every fake must mention {required.title()}.\n", 1)
+        text = text.replace("Rules:\n", f"Rules:\n- Every fake must mention {required.title()}, "
+                            "but not always as the first word.\n", 1)
     return text
 
 

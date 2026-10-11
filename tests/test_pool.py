@@ -65,3 +65,26 @@ def test_trump_mode_matches_the_word_not_a_substring():
 def test_odd_hyphens_and_spaces_are_normalised():
     t = f"150{chr(0x2011)}million{chr(0x2011)}year{chr(0x00A0)}old fossil found in Alberta"
     assert pool.clean_title(t) == "150-million-year old fossil found in Alberta"
+
+
+
+import pytest
+
+
+@pytest.mark.parametrize("title", [
+    "Government unveils plan to fix housing crisis...",
+    "Government unveils plan to fix housing crisis" + chr(0x2026),
+    "Did a Baby Dinosaur Eat Its Own Kind? Alberta Fossil Reveals Prehistoric Mystery",
+    "Why the Fed is still nervous about inflation this year",
+    "How a small town in Ohio learned to love its pigeons",
+    "What we know about the storm that hit Florida overnight",
+    "Opinion: the case for a four-day week in Australia",
+])
+def test_non_headlines_are_not_usable(title):
+    # Charlie, 11/10/2026: no titles ending in an ellipsis, and the dinosaur
+    # question "doesn't read like a headline".
+    assert not pool.usable(title)
+
+
+def test_plain_headline_still_usable():
+    assert pool.usable("Candidate named Hitler Mussolini elected mayor in Peru")

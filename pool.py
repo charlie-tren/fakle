@@ -17,6 +17,12 @@ QUOTES = {chr(0x2018): "'", chr(0x2019): "'", chr(0x201C): '"', chr(0x201D): '"'
           chr(0x00A0): " ", chr(0x202F): " "}
 SUFFIX = re.compile(r"\s+[-|]\s+[A-Z][\w .&']{1,40}$")
 JUNK = re.compile(r"(scores|live updates|live blog|newsletter|podcast|watch:|video:|quiz)", re.I)
+# Features, explainers and opinion pieces do not read as headlines (Charlie, 11/10/2026:
+# the "Did a baby dinosaur eat its own kind?" title), and a title cut off with an
+# ellipsis is a fragment.
+NOT_HEADLINE = re.compile(
+    r"^(how|why|what|who|where|when|did|does|do|is|are|can|could|will|would|should|"
+    r"here's|inside|opinion|analysis|explainer|editorial|letters?)\b", re.I)
 DUPE = 0.6
 
 
@@ -53,6 +59,8 @@ def words(t: str) -> set[str]:
 
 def usable(t: str) -> bool:
     t = clean_title(t)
+    if "?" in t or t.endswith("...") or t.endswith(chr(0x2026)) or NOT_HEADLINE.search(t):
+        return False
     return len(t.split()) >= 5 and not JUNK.search(t)
 
 

@@ -32,10 +32,27 @@ def same_story(a: str, b: str, required: str | None = None) -> bool:
     return len(content(a) & content(b)) >= 2
 
 
+CONNECTORS = (" amid ", " as ", " ahead of ", " after ", " in bid to ", " despite ")
+
+
+def structure_clash(fakes: list[str], required: str | None = None) -> set[int]:
+    """Indices of fakes that share an opening or a connector with an earlier one."""
+    seen_open, seen_conn, clash = set(), set(), set()
+    for i, f in enumerate(fakes):
+        w = [x for x in f.lower().split() if x != required]
+        opening = " ".join(w[:2])
+        conns = {c for c in CONNECTORS if c in f" {f.lower()} "}
+        if opening in seen_open or conns & seen_conn:
+            clash.add(i)
+        seen_open.add(opening)
+        seen_conn |= conns
+    return clash
+
+
 def _pick(p, gen, required=None):
     best = None
     for _ in range(3):
-        raw, _prov = gen(prompts.pick_prompt(p))
+        raw, _prov = gen(prompts.pick_prompt(p, required))
         try:
             rounds = prompts.parse_pick(raw, len(p))
         except ValueError:
@@ -80,7 +97,7 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
         # Only the rounds still failing go back, each with the reasons it failed.
         raw, _prov = gen(prompts.fake_prompt([rounds[t] for t in todo],
                                              {k: notes[t] for k, t in enumerate(todo) if t in notes},
-                                             others, required))
+                                             others, required, seed))
         try:
             got = prompts.parse_fakes(raw, len(todo))
         except ValueError:
@@ -95,7 +112,15 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
                 still.append(t)
             else:
                 fakes[t] = pool.clean_title(f)
-        todo = still
+        # Five fakes with one shape are guessable by the third: send back any that
+        # repeats an opening or a connector already used today.
+        order = sorted(fakes)
+        for k in structure_clash([fakes[t] for t in order], required):
+            t = order[k]
+            print(f"{seed} round {t + 1} rejected (structure): {fakes.pop(t)}")
+            notes[t] = ["same structure as another fake"]
+            still.append(t)
+        todo = sorted(still)
         if not todo:
             break
     if todo:
