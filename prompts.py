@@ -52,6 +52,9 @@ to combat afternoon heat".
 Rules:
 - Never end with an "amid ...", "as ...", "ahead of ..." or "after ..." clause. That
   crutch is how earlier fakes gave themselves away.
+- Each fake is on a different topic from all three in its round, not a spin-off of one.
+  Wrong: beside "Alberta woman, 61, breaks her own world record by planking for 5 hours",
+  writing "Canadian health board bans plank competitions longer than three hours".
 - Each fake reports a different event from all three in its round. Never combine,
   rephrase or borrow phrases from them: a fake stitched from its neighbours is the
   first thing a player spots.

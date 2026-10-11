@@ -104,3 +104,8 @@ def test_fake_prompt_gives_a_word_range_not_a_single_target():
 def test_pick_prompt_and_parse_take_a_round_count():
     assert "Group them into 2 rounds" in prompts.pick_prompt(POOL, rounds=2)
     assert prompts.parse_pick(json.dumps({"rounds": [[0, 1, 2], [3, 4, 5]]}), 40, rounds=2) == [[0, 1, 2], [3, 4, 5]]
+
+
+def test_fake_prompt_shows_the_spin_off_it_must_not_write():
+    p = prompts.fake_prompt([POOL[0:3]])
+    assert "plank competitions" in p and "different topic" in p
