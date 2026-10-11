@@ -60,7 +60,7 @@ def parse_pick(raw, pool_len: int) -> list[list[int]]:
 
 
 def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = None,
-                others: list[dict] | None = None) -> str:
+                others: list[dict] | None = None, required: str | None = None) -> str:
     blocks = []
     for n, r in enumerate(rounds):
         lines = "\n".join(f"- {x['text']} ({x['source']})" for x in r)
@@ -69,7 +69,11 @@ def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = N
             extra = f"\nYour last attempt for this round failed: {', '.join(notes[n])}."
         blocks.append(f"Round {n + 1}:\n{lines}{extra}")
     other = "\n".join(f"- {x['text']}" for x in (others or [])) or "(none)"
-    return FAKE.format(rounds="\n\n".join(blocks), others=other)
+    text = FAKE.format(rounds="\n\n".join(blocks), others=other)
+    if required:
+        # Every real in the round carries it, so a fake without it is the answer.
+        text = text.replace("Rules:\n", f"Rules:\n- Every fake must mention {required.title()}.\n", 1)
+    return text
 
 
 def parse_fakes(raw, n: int) -> list[str]:

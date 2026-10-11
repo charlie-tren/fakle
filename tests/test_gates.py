@@ -36,3 +36,37 @@ def test_known_proper_noun_passes_case_insensitively():
 def test_possessive_name_from_the_day_is_known():
     day = DAY + ["Trump picks Truth Social's Katie Zacharia as White House press secretary"]
     assert "new name" not in gates.check_fake("Truth Social's Katie Zacharia joins China trade talks", REALS, day)
+
+
+import pytest
+
+
+@pytest.mark.parametrize("fake", [
+    "Trump suffers stroke at a rally in Spain, aides say",
+    "Putin accused of stealing grain bound for Spain and China",
+    "Trump undergoes surgery at a hospital in Spain",
+    "Putin sued by China over Spain diesel deal",
+    "Trump sentenced in Spain over China export deal",
+    "Putin faces corruption probe in Spain",
+    "Trump shot at in Spain during China talks",
+    "Putin found guilty of smuggling diesel into Spain",
+    "Trump collapses on stage in Spain, aides say",
+    "Deaths in Spain blamed on China hybrid exports",
+])
+def test_allegation_gate_covers_health_and_crime(fake):
+    assert "allegation" in gates.check_fake(fake, REALS, DAY)
+
+
+def test_new_name_in_first_word_fails():
+    assert "new name" in gates.check_fake("Hargreaves backs China hybrid export deal with Spain", REALS, DAY)
+    assert "new name" in gates.check_fake("Musk says he will move his family to Spain next year", REALS, DAY)
+
+
+def test_ordinary_first_word_known_from_the_day_passes():
+    day = DAY + ["Officials say the plan is on hold"]
+    assert "new name" not in gates.check_fake("Officials in Spain ask China to fund migration cooperation", REALS, day)
+
+
+def test_required_word_gate():
+    assert "required" in gates.check_fake("Putin offers Spain a diesel deal over migration", REALS, DAY, required="trump")
+    assert "required" not in gates.check_fake("Trump offers Spain a diesel deal over migration", REALS, DAY, required="trump")

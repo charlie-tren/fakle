@@ -71,5 +71,8 @@ def build_pool(articles: list[dict], trump: bool = False) -> list[dict]:
         if any(_jaccard(w, s) >= DUPE for s in seen):
             continue
         seen.append(w)
-        out.append({"text": text, "source": a.get("source", ""), "url": a.get("url", "")})
+        url = a.get("url", "")
+        # The page links these after a reveal, on an origin the whole hub shares.
+        url = url if url.startswith(("https://", "http://")) else ""
+        out.append({"text": text, "source": a.get("source", ""), "url": url})
     return out

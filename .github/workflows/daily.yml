@@ -1,6 +1,10 @@
 name: daily-puzzle
-# One Story commits its history at about 05:00 Sydney. Each rung below is a no-op
-# once today's puzzle exists, and waits quietly if One Story has not landed yet.
+# One Story commits its history at about 05:00 Sydney. Each rung below rebuilds only a
+# mode that is missing for today, and waits quietly if One Story has not landed yet.
+#
+# Pages is deployed from this workflow, never from a commit: puzzle.json is not in git,
+# so yesterday's fakes are not left readable in the repo's public history. The current
+# file is fetched from the live site first, which is what the "already built" check reads.
 on:
   schedule:
     - cron: "10 17 * * *"
@@ -10,10 +14,14 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types: [heartbeat]
+  push:
+    branches: [main]
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 concurrency:
-  group: daily
+  group: pages
   cancel-in-progress: false
 jobs:
   build:
@@ -23,18 +31,30 @@ jobs:
       - uses: actions/setup-python@v7
         with: { python-version: "3.12" }
       - run: pip install -r requirements.txt
+      - name: Fetch the live puzzle
+        run: curl -sf https://charlietrenorden.com/fakle/puzzle.json -o puzzle.json || rm -f puzzle.json
       - name: Build
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: python build.py
-      - name: Commit
+      - name: Assemble the site
         run: |
-          git config user.name "fakle-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add puzzle.json
-          git diff --cached --quiet && exit 0
-          git commit -m "Puzzle: $(python -c 'import json;print(json.load(open("puzzle.json"))["date"])')"
-          for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
-          exit 1
+          mkdir _site
+          cp index.html app.js style.css _site/
+          for f in puzzle.json favicon.svg favicon.ico favicon-48.png favicon-192.png apple-touch-icon.png; do
+            [ -f "$f" ] && cp "$f" _site/
+          done
+          ls -la _site
+      - uses: actions/upload-pages-artifact@v5
+        with: { path: _site }
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

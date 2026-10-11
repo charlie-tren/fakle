@@ -134,10 +134,24 @@
     $("countdown").textContent = "Next Fakle in " + Math.floor(mins / 60) + "h " + (mins % 60) + "m";
   }
 
+  // A failed build leaves yesterday's file up. It may still be played until midday
+  // Sydney, because the new one can land late; after that it is not today's Fakle.
+  function fresh(date) {
+    var parts = {};
+    new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Sydney", year: "numeric", month: "2-digit",
+      day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date())
+      .forEach(function (x) { parts[x.type] = x.value; });
+    var today = parts.year + "-" + parts.month + "-" + parts.day;
+    if (date === today) return true;
+    var y = new Date(today + "T00:00:00Z");
+    y.setUTCDate(y.getUTCDate() - 1);
+    return date === y.toISOString().slice(0, 10) && Number(parts.hour) < 12;
+  }
+
   fetch("puzzle.json", { cache: "no-cache" }).then(function (r) { return r.json(); }).then(function (p) {
     rounds = p[mode];
     state.date = p.date;
-    if (!rounds) { $("none").hidden = false; return; }
+    if (!rounds || !fresh(p.date)) { $("none").hidden = false; return; }
     var saved = store.get(PROGRESS);
     if (saved && saved.date === p.date && Array.isArray(saved.picks)) state.picks = saved.picks.slice(0, rounds.length);
     if (state.picks.length >= rounds.length) finish(); else render(state.picks.length);

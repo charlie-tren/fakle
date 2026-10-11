@@ -7,13 +7,19 @@ from pool import clean_title, words
 
 OVERLAP = 0.6
 LEN_LO, LEN_HI = 0.7, 1.3
-# Death is barred too, so a fake is never a death. A sharp player could learn that;
-# accepted, because a fabricated death of a named person is the worst output possible.
+# Crime, sex, health and death. Death is barred too, so a fake is never a death; the
+# picker drops reals carrying these words as well, so a barred word cannot mark a
+# headline as provably real.
 ALLEGATION = re.compile(
-    r"\b(arrest\w*|charged|indict\w*|convict\w*|jail\w*|prison|rape\w*|sex\w*|"
-    r"assault\w*|abus\w*|affair|fraud\w*|brib\w*|launder\w*|murder\w*|kill\w*|"
-    r"dies|died|dead|death|cancer|dementia|diagnos\w*|illness|hospitali[sz]\w*|"
-    r"overdose|drunk|pregnan\w*)\b", re.I)
+    r"\b(arrest\w*|charg\w*|indict\w*|convict\w*|jail\w*|prison\w*|sentenc\w*|guilty|"
+    r"accus\w*|alleg\w*|su(e|ed|es|ing)|lawsuit\w*|probe\w*|investigat\w*|"
+    r"steal\w*|stole\w*|theft\w*|thie\w*|smuggl\w*|corrupt\w*|fraud\w*|brib\w*|"
+    r"launder\w*|embezzl\w*|scam\w*|drug\w*|traffick\w*|"
+    r"rape\w*|sex\w*|assault\w*|abus\w*|harass\w*|affair\w*|grop\w*|"
+    r"murder\w*|kill\w*|shot|shoot\w*|stab\w*|attack\w*|suicid\w*|"
+    r"dies|died|dead|death\w*|dying|"
+    r"cancer\w*|dementia|stroke\w*|diagnos\w*|ill|illness\w*|sick\w*|surger\w*|"
+    r"hospital\w*|collaps\w*|overdose\w*|drunk\w*|pregnan\w*|disease\w*)\b", re.I)
 
 
 def _overlap(a: set, b: set) -> float:
@@ -21,12 +27,13 @@ def _overlap(a: set, b: set) -> float:
 
 
 def _proper_nouns(t: str) -> set[str]:
+    # Every capitalised word, the first included: headlines lead with their subject.
     # Tokenised with words() so "Social's" splits the same way as the day's vocabulary.
     toks = re.findall(r"[A-Za-z][\w']*", t)
-    return {w for tok in toks[1:] if tok[0].isupper() for w in words(tok) if len(w) > 1}
+    return {w for tok in toks if tok[0].isupper() for w in words(tok) if len(w) > 1}
 
 
-def check_fake(fake: str, reals: list[str], day_titles: list[str]) -> list[str]:
+def check_fake(fake: str, reals: list[str], day_titles: list[str], required: str | None = None) -> list[str]:
     fake = clean_title(fake)
     fails = []
     fw = words(fake)
@@ -40,4 +47,6 @@ def check_fake(fake: str, reals: list[str], day_titles: list[str]) -> list[str]:
     known = set().union(*(words(t) for t in day_titles))
     if _proper_nouns(fake) - known:
         fails.append("new name")
+    if required and required not in fw:
+        fails.append("required")
     return fails

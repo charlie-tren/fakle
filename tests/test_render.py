@@ -10,6 +10,17 @@ import pytest
 
 pw = pytest.importorskip("playwright.sync_api")
 ROOT = Path(__file__).resolve().parents[1]
+# The fixture is dated 2026-10-11 and the page refuses a stale puzzle, so every
+# context runs on that morning's clock. Without this the suite goes red tomorrow.
+NOW = "2026-10-11T09:00:00+11:00"
+
+
+def context(browser, **kw):
+    ctx = browser.new_context(**kw)
+    ctx.add_init_script("""(() => { const T = new Date('%s').getTime(); const D = Date;
+      class F extends D { constructor(...a) { super(...(a.length ? a : [T])); } static now() { return T; } }
+      window.Date = F; })()""" % NOW)
+    return ctx
 
 
 class Quiet(http.server.SimpleHTTPRequestHandler):
@@ -38,7 +49,7 @@ def browser():
 
 
 def page_at(browser, url, width=1280):
-    ctx = browser.new_context(viewport={"width": width, "height": 900})
+    ctx = context(browser, viewport={"width": width, "height": 900})
     pg = ctx.new_page()
     errors = []
     pg.on("pageerror", lambda e: errors.append(str(e)))
@@ -101,7 +112,7 @@ def test_progress_resumes_same_day_and_resets_next_day(site, browser):
 
 
 def test_plays_when_storage_throws(site, browser):
-    ctx = browser.new_context()
+    ctx = context(browser)
     ctx.add_init_script("Object.defineProperty(window,'localStorage',{get(){throw new Error('blocked')}})")
     pg = ctx.new_page()
     errors = []
@@ -114,7 +125,7 @@ def test_plays_when_storage_throws(site, browser):
 
 
 def test_missing_mode_says_so(site, browser):
-    ctx = browser.new_context()
+    ctx = context(browser)
     pg = ctx.new_page()
     pg.route("**/puzzle.json", lambda r: r.fulfill(json={"date": "2026-10-11", "normal": None, "trump": None}))
     pg.goto(site)
@@ -126,3 +137,30 @@ def test_no_dashes_in_copy():
         t = (ROOT / f).read_text(encoding="utf-8")
         assert chr(0x2013) not in t and chr(0x2014) not in t
         assert "\\u2013" not in t and "\\u2014" not in t
+
+
+def _with_date(browser, site, puzzle_date, now):
+    ctx = browser.new_context()
+    pg = ctx.new_page()
+    pg.clock.set_fixed_time(now)
+    data = json.loads((ROOT / "tests/fixtures/puzzle.json").read_text(encoding="utf-8"))
+    data["date"] = puzzle_date
+    pg.route("**/puzzle.json", lambda r: r.fulfill(json=data))
+    pg.goto(site)
+    return pg
+
+
+def test_stale_puzzle_says_none(site, browser):
+    pg = _with_date(browser, site, "2026-10-09", "2026-10-11T09:00:00+11:00")
+    pg.wait_for_selector("#none", state="visible")
+    assert pg.locator(".headline").count() == 0
+
+
+def test_yesterdays_puzzle_still_plays_early_morning(site, browser):
+    pg = _with_date(browser, site, "2026-10-10", "2026-10-11T07:00:00+11:00")
+    pg.wait_for_selector(".headline")
+
+
+def test_yesterdays_puzzle_retired_by_afternoon(site, browser):
+    pg = _with_date(browser, site, "2026-10-10", "2026-10-11T15:00:00+11:00")
+    pg.wait_for_selector("#none", state="visible")

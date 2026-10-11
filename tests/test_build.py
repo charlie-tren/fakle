@@ -26,6 +26,12 @@ def stub(fakes_by_call):
 BASE = "Officials say the new plan will be reviewed again later after more talks this year".split()
 
 
+def rounds_of(p):
+    """The rounds make_mode will form from the stub's first 15 picks."""
+    c = [x for x in p if not build.gates.ALLEGATION.search(x["text"])]
+    return [c[i:i + 3] for i in range(0, 15, 3)]
+
+
 def good_fakes(rounds_pool):
     # Lowercase after the first word, so no new names; common words only, so no
     # overlap; sized to its round's mean so the length gate passes. Distinct per round.
@@ -38,7 +44,7 @@ def good_fakes(rounds_pool):
 
 def test_make_mode_shape_and_cleanliness():
     p = pool.build_pool(FIX["articles"])
-    rounds_pool = [p[i:i + 3] for i in range(0, 15, 3)]
+    rounds_pool = rounds_of(p)
     gen, _ = stub([good_fakes(rounds_pool)])
     rounds = build.make_mode(p, gen, "2026-10-11:normal")
     assert rounds and len(rounds) == 5
@@ -49,7 +55,7 @@ def test_make_mode_shape_and_cleanliness():
 
 def test_fake_position_is_deterministic():
     p = pool.build_pool(FIX["articles"])
-    rounds_pool = [p[i:i + 3] for i in range(0, 15, 3)]
+    rounds_pool = rounds_of(p)
     a = build.make_mode(p, stub([good_fakes(rounds_pool)])[0], "s")
     b = build.make_mode(p, stub([good_fakes(rounds_pool)])[0], "s")
     assert [r["fake"] for r in a] == [r["fake"] for r in b]
@@ -71,7 +77,7 @@ def test_small_pool_gives_none_without_calling_model():
 
 def test_main_skips_when_today_already_built(tmp_path, capsys):
     out = tmp_path / "puzzle.json"
-    out.write_text(json.dumps({"date": "2026-10-11"}))
+    out.write_text(json.dumps({"date": "2026-10-11", "normal": [{"x": 1}], "trump": [{"x": 1}]}))
     assert build.main(["--date", "2026-10-11", "--local", str(tmp_path), "--out", str(out)]) == 0
     assert "already built" in capsys.readouterr().out
 
@@ -83,18 +89,20 @@ def test_main_waits_for_one_story(tmp_path, capsys):
 
 
 def test_build_records_date_and_provider():
-    p = pool.build_pool(FIX["articles"])
-    fakes = good_fakes([p[i:i + 3] for i in range(0, 15, 3)])
-    gen, _ = stub([fakes, fakes])
+    p = [x for x in pool.build_pool(FIX["articles"]) if not build.gates.ALLEGATION.search(x["text"])]
+    t = [x for x in pool.build_pool(FIX["articles"], trump=True) if not build.gates.ALLEGATION.search(x["text"])]
+    gen, _ = stub([good_fakes(rounds_of(p)),
+                   trump_fakes([t[i:i + 3] for i in range(0, 15, 3)])])
     result = build.build("2026-10-11", FIX, gen)
-    assert result["date"] == "2026-10-11" and result["provider"] == "stub"
+    assert result["date"] == "2026-10-11" and result["providers"]["normal"] == "stub"
+    assert result["model"] == build.gemini.MODEL
     assert result["normal"] is not None
 
 
 def test_thin_trump_pool_drops_only_trump_mode():
     no_trump = {"articles": [a for a in FIX["articles"] if "trump" not in a["title"].lower()]}
     p = pool.build_pool(no_trump["articles"])
-    fakes = good_fakes([p[i:i + 3] for i in range(0, 15, 3)])
+    fakes = good_fakes(rounds_of(p))
     gen, _ = stub([fakes])
     result = build.build("2026-10-11", no_trump, gen)
     assert result["normal"] is not None
@@ -104,21 +112,22 @@ def test_thin_trump_pool_drops_only_trump_mode():
 def test_fake_prompt_carries_unpicked_headlines():
     p = pool.build_pool(FIX["articles"])
     seen = []
-    base, _ = stub([good_fakes([p[i:i + 3] for i in range(0, 15, 3)])])
+    base, _ = stub([good_fakes(rounds_of(p))])
 
     def gen(prompt):
         seen.append(prompt)
         return base(prompt)
     build.make_mode(p, gen, "s")
     fake_prompts = [x for x in seen if "hardest to believe" not in x]
-    assert fake_prompts and all(p[15]["text"] in x for x in fake_prompts)
+    first_unpicked = [x for x in p if not build.gates.ALLEGATION.search(x["text"])][15]
+    assert fake_prompts and all(first_unpicked["text"] in x for x in fake_prompts)
 
 
 def test_provider_failure_in_one_mode_keeps_the_other():
     # Normal mode takes one pick call and one fake call; every call after that
     # (Trump mode) fails the way a spent quota does.
     p = pool.build_pool(FIX["articles"])
-    base, _ = stub([good_fakes([p[i:i + 3] for i in range(0, 15, 3)])])
+    base, _ = stub([good_fakes(rounds_of(p))])
     calls = []
 
     def gen(prompt):
@@ -129,3 +138,57 @@ def test_provider_failure_in_one_mode_keeps_the_other():
     result = build.build("2026-10-11", FIX, gen)
     assert result["normal"] is not None
     assert result["trump"] is None
+
+
+def trump_fakes(rounds_pool):
+    return ["Trump " + f for f in good_fakes(rounds_pool)]
+
+
+def test_trump_mode_fake_must_mention_trump():
+    p = pool.build_pool(FIX["articles"], trump=True)
+    day = [x["text"] for x in pool.build_pool(FIX["articles"])]
+    no_trump = good_fakes(rounds_of(p))
+    gen, calls = stub([no_trump, no_trump, no_trump])
+    assert build.make_mode(p, gen, "s", day=day, required="trump") is None
+    assert calls["fake"] == 3
+
+
+def test_trump_mode_vocabulary_is_the_whole_day():
+    # "Officials" appears in the day's non-Trump headlines, so a Trump fake may use it.
+    p = pool.build_pool(FIX["articles"], trump=True)
+    day = [x["text"] for x in pool.build_pool(FIX["articles"])] + ["Officials say the plan is on hold"]
+    gen, _ = stub([trump_fakes(rounds_of(p))])
+    assert build.make_mode(p, gen, "s", day=day, required="trump") is not None
+
+
+def test_allegation_headlines_are_never_picked_as_reals():
+    p = [{"text": f"Police arrest man number {i} for odd reasons today", "source": "X", "url": ""} for i in range(10)]
+    p += pool.build_pool(FIX["articles"])
+    seen = []
+    base, _ = stub([good_fakes(rounds_of(p))])
+
+    def gen(prompt):
+        seen.append(prompt)
+        return base(prompt)
+    build.make_mode(p, gen, "s")
+    assert "Police arrest" not in seen[0]
+
+
+def test_main_rebuilds_only_the_missing_mode(tmp_path, monkeypatch):
+    (tmp_path / "2026-10-11.json").write_text(json.dumps(FIX), encoding="utf-8")
+    kept = {"headlines": [], "fake": 0, "marker": "kept"}
+    out = tmp_path / "puzzle.json"
+    out.write_text(json.dumps({"date": "2026-10-11", "normal": [kept], "trump": None,
+                               "providers": {"normal": "gemini", "trump": None}}))
+    asked = []
+
+    def fake_build(date, history, gen, modes=("normal", "trump")):
+        asked.append(tuple(modes))
+        return {"date": date, "normal": None, "trump": [{"headlines": [], "fake": 1}],
+                "providers": {"trump": "stub"}, "model": "m"}
+    monkeypatch.setattr(build, "build", fake_build)
+    assert build.main(["--date", "2026-10-11", "--local", str(tmp_path), "--out", str(out)]) == 0
+    got = json.loads(out.read_text())
+    assert asked == [("trump",)]
+    assert got["normal"] == [kept] and got["trump"] == [{"headlines": [], "fake": 1}]
+    assert got["providers"] == {"normal": "gemini", "trump": "stub"}

@@ -48,3 +48,8 @@ def test_fake_prompt_lists_other_headlines_as_name_source():
 
 def test_pick_prompt_asks_for_different_stories_per_round():
     assert "three different stories" in prompts.pick_prompt(POOL)
+
+
+def test_fake_prompt_states_required_word():
+    assert "must mention Trump" in prompts.fake_prompt([POOL[0:3]], required="trump")
+    assert "must mention" not in prompts.fake_prompt([POOL[0:3]])

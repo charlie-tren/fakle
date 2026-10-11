@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import gates
+import gemini
 import llm
 import pool
 import prompts
@@ -15,6 +16,7 @@ import prompts
 MIN_POOL = 15
 OTHERS = 80      # unpicked headlines shown to the fake writer as a source of names
 FAKE_TRIES = 3
+MODES = {"normal": None, "trump": "trump"}   # mode -> word every headline in it carries
 
 
 def _pick(p, gen):
@@ -27,7 +29,12 @@ def _pick(p, gen):
     return None
 
 
-def make_mode(p: list[dict], gen, seed: str) -> list[dict] | None:
+def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
+              required: str | None = None) -> list[dict] | None:
+    # A real carrying a barred word could never be the fake, so it would be a free
+    # elimination. It stays in the day's vocabulary; it just cannot be picked.
+    day = day if day is not None else [x["text"] for x in p]
+    p = [x for x in p if not gates.ALLEGATION.search(x["text"])]
     if len(p) < MIN_POOL:
         return None
     idx = _pick(p, gen)
@@ -36,7 +43,6 @@ def make_mode(p: list[dict], gen, seed: str) -> list[dict] | None:
     rounds = [[p[i] for i in r] for r in idx]
     picked = {i for r in idx for i in r}
     others = [x for i, x in enumerate(p) if i not in picked][:OTHERS]
-    day = [x["text"] for x in p]
     fakes: dict[int, str] = {}
     notes: dict[int, list[str]] = {}
     todo = list(range(len(rounds)))
@@ -44,14 +50,14 @@ def make_mode(p: list[dict], gen, seed: str) -> list[dict] | None:
         # Only the rounds still failing go back, each with the reasons it failed.
         raw, _prov = gen(prompts.fake_prompt([rounds[t] for t in todo],
                                              {k: notes[t] for k, t in enumerate(todo) if t in notes},
-                                             others))
+                                             others, required))
         try:
             got = prompts.parse_fakes(raw, len(todo))
         except ValueError:
             continue
         still = []
         for t, f in zip(todo, got):
-            why = gates.check_fake(f, [x["text"] for x in rounds[t]], day)
+            why = gates.check_fake(f, [x["text"] for x in rounds[t]], day, required)
             if why:
                 notes[t] = why
                 still.append(t)
@@ -71,28 +77,28 @@ def make_mode(p: list[dict], gen, seed: str) -> list[dict] | None:
     return out
 
 
-def build(date: str, history: dict, gen) -> dict:
-    provider = {"used": None}
+def build(date: str, history: dict, gen, modes=tuple(MODES)) -> dict:
+    arts = history["articles"]
+    # Every mode is gated against the WHOLE day, so a Trump fake cannot restate a real
+    # non-Trump story and get it labelled as made up.
+    day = [x["text"] for x in pool.build_pool(arts)]
+    result = {"date": date, "model": gemini.MODEL, "providers": {}}
+    for name in modes:
+        used = {"p": None}
 
-    def tracked(prompt):
-        raw, prov = gen(prompt)
-        provider["used"] = prov
-        return raw, prov
-
-    def mode(trump: bool, name: str):
-        # A spent quota in one mode must not cost the other its puzzle.
+        def tracked(prompt):
+            raw, prov = gen(prompt)
+            used["p"] = prov
+            return raw, prov
         try:
-            return make_mode(pool.build_pool(history["articles"], trump=trump), tracked, f"{date}:{name}")
+            result[name] = make_mode(pool.build_pool(arts, trump=name == "trump"), tracked,
+                                     f"{date}:{name}", day=day, required=MODES[name])
         except llm.NoProvider as exc:
+            # A spent quota in one mode must not cost the other its puzzle.
             print(f"{date} {name}: no provider: {str(exc)[:160]}")
-            return None
-
-    return {
-        "date": date,
-        "normal": mode(False, "normal"),
-        "trump": mode(True, "trump"),
-        "provider": provider["used"],
-    }
+            result[name] = None
+        result["providers"][name] = used["p"]
+    return result
 
 
 def main(argv=None) -> int:
@@ -102,20 +108,29 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default="puzzle.json")
     a = ap.parse_args(argv)
     out = Path(a.out)
-    if out.exists() and json.loads(out.read_text(encoding="utf-8")).get("date") == a.date:
+    have = json.loads(out.read_text(encoding="utf-8")) if out.exists() else {}
+    if have.get("date") != a.date:
+        have = {}
+    missing = [m for m in MODES if not have.get(m)]
+    if not missing:
         print(f"{a.date} already built")
         return 0
     history = pool.load_history(a.date, a.local)
     if history is None:
         print(f"{a.date}: waiting for One Story")
         return 0
-    result = build(a.date, history, lambda prompt: llm.generate(prompt))
-    if result["normal"] is None and result["trump"] is None:
-        print(f"{a.date}: both modes failed, nothing written")
-        return 1
+    new = build(a.date, history, lambda prompt: llm.generate(prompt), modes=missing)
+    if not any(new.get(m) for m in missing):
+        print(f"{a.date}: {', '.join(missing)} failed, nothing written")
+        return 0 if have else 1
+    # A mode already published today is never replaced, only a missing one filled.
+    result = {"date": a.date, "model": new["model"], "providers": dict(have.get("providers", {}))}
+    for m in MODES:
+        result[m] = have.get(m) or new.get(m)
+        if not have.get(m):
+            result["providers"][m] = new["providers"].get(m)
     out.write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(f"{a.date}: normal={'ok' if result['normal'] else 'none'} "
-          f"trump={'ok' if result['trump'] else 'none'} via {result['provider']}")
+    print(f"{a.date}: " + " ".join(f"{m}={'ok' if result[m] else 'none'}" for m in MODES))
     return 0
 
 

@@ -20,13 +20,13 @@ def test_usable_rejects_junk():
 
 def test_build_pool_dedupes_near_identical_titles():
     arts = [
-        {"title": "Fed holds rates steady in September", "source": "Reuters", "url": "u1"},
-        {"title": "Fed holds rates steady in September, again", "source": "AP", "url": "u2"},
-        {"title": "Moroccan king says migration model hit limit", "source": "AFP", "url": "u3"},
+        {"title": "Fed holds rates steady in September", "source": "Reuters", "url": "https://a/u1"},
+        {"title": "Fed holds rates steady in September, again", "source": "AP", "url": "https://a/u2"},
+        {"title": "Moroccan king says migration model hit limit", "source": "AFP", "url": "https://a/u3"},
     ]
     p = pool.build_pool(arts)
     assert len(p) == 2
-    assert {x["url"] for x in p} == {"u1", "u3"}
+    assert {x["url"] for x in p} == {"https://a/u1", "https://a/u3"}
 
 
 def test_trump_pool_only_trump():
@@ -44,3 +44,11 @@ def test_load_history_local(tmp_path):
     (tmp_path / "2026-10-11.json").write_text(json.dumps(FIX), encoding="utf-8")
     assert pool.load_history("2026-10-11", local_dir=str(tmp_path))["run_date"] == "2026-10-11"
     assert pool.load_history("2026-10-12", local_dir=str(tmp_path)) is None
+
+
+
+def test_non_http_urls_are_dropped():
+    arts = [{"title": "Moroccan king says migration model hit limit", "source": "X", "url": "javascript:alert(1)"},
+            {"title": "China and EU strike deal to halve hybrid exports", "source": "Y", "url": "https://ok.example/a"}]
+    p = pool.build_pool(arts)
+    assert [x["url"] for x in p] == ["", "https://ok.example/a"]
