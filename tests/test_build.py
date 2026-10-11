@@ -247,3 +247,27 @@ def test_pick_keeps_a_same_story_round_rather_than_nothing():
     bad = {"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]]}
     gen = lambda prompt: (json.dumps(bad), "stub")
     assert build._pick(p, gen) == bad["rounds"]
+
+
+def test_dropped_mode_says_why(capsys):
+    p = pool.build_pool(FIX["articles"])
+    bad = ["Senator Jane Hargreaves arrested"] * 5
+    gen, _ = stub([bad, bad, bad])
+    assert build.make_mode(p, gen, "s") is None
+    out = capsys.readouterr().out
+    assert "allegation" in out and "new name" in out and "Hargreaves" in out
+
+
+def test_trump_fake_writer_sees_names_from_the_whole_day():
+    t = pool.build_pool(FIX["articles"], trump=True)
+    everyone = pool.build_pool(FIX["articles"])
+    non_trump = [x["text"] for x in everyone if "trump" not in pool.words(x["text"])]
+    seen = []
+    base, _ = stub([trump_fakes(rounds_of(t))])
+
+    def gen(prompt):
+        seen.append(prompt)
+        return base(prompt)
+    build.make_mode(t, gen, "s", day=[x["text"] for x in everyone], required="trump", others_pool=everyone)
+    fake_prompt = [x for x in seen if "hardest to believe" not in x][0]
+    assert any(h in fake_prompt for h in non_trump)

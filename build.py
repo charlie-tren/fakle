@@ -14,7 +14,7 @@ import prompts
 
 MIN_POOL = 15
 PICK_CAP = 250   # Groq's free tier allows 12K tokens a minute; ~660 headlines is ~10K
-OTHERS = 80      # unpicked headlines shown to the fake writer as a source of names
+OTHERS = 100     # headlines shown to the fake writer as a source of names
 FAKE_TRIES = 3
 MODES = {"normal": None, "trump": "trump"}   # mode -> word every headline in it carries
 
@@ -49,7 +49,7 @@ def _pick(p, gen, required=None):
 
 
 def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
-              required: str | None = None) -> list[dict] | None:
+              required: str | None = None, others_pool: list[dict] | None = None) -> list[dict] | None:
     # A real carrying a barred word could never be the fake, so it would be a free
     # elimination. It stays in the day's vocabulary; it just cannot be picked.
     day = day if day is not None else [x["text"] for x in p]
@@ -61,10 +61,18 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
         p = [p[i] for i in keep]
     idx = _pick(p, gen, required)
     if idx is None:
+        print(f"{seed}: no valid pick")
         return None
     rounds = [[p[i] for i in r] for r in idx]
     picked = {i for r in idx for i in r}
-    others = [x for i, x in enumerate(p) if i not in picked][:OTHERS]
+    if others_pool is None:
+        others = [x for i, x in enumerate(p) if i not in picked][:OTHERS]
+    else:
+        # The name source must match the gate's vocabulary, which is the whole day:
+        # shown only Trump headlines, the writer invented names the gate then rejected.
+        taken = {p[i]["text"] for i in picked}
+        rest = [x for x in others_pool if x["text"] not in taken and not gates.ALLEGATION.search(x["text"])]
+        others = random.Random(seed).sample(rest, min(OTHERS, len(rest)))
     fakes: dict[int, str] = {}
     notes: dict[int, list[str]] = {}
     todo = list(range(len(rounds)))
@@ -81,6 +89,8 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
         for t, f in zip(todo, got):
             why = gates.check_fake(f, [x["text"] for x in rounds[t]], day, required)
             if why:
+                # Printed so a dropped mode says which rule dropped it.
+                print(f"{seed} round {t + 1} rejected ({', '.join(why)}): {f}")
                 notes[t] = why
                 still.append(t)
             else:
@@ -103,7 +113,8 @@ def build(date: str, history: dict, gen, modes=tuple(MODES)) -> dict:
     arts = history["articles"]
     # Every mode is gated against the WHOLE day, so a Trump fake cannot restate a real
     # non-Trump story and get it labelled as made up.
-    day = [x["text"] for x in pool.build_pool(arts)]
+    everyone = pool.build_pool(arts)
+    day = [x["text"] for x in everyone]
     result = {"date": date, "providers": {}}
     for name in modes:
         used = {"p": None}
@@ -114,7 +125,8 @@ def build(date: str, history: dict, gen, modes=tuple(MODES)) -> dict:
             return raw, prov
         try:
             result[name] = make_mode(pool.build_pool(arts, trump=name == "trump"), tracked,
-                                     f"{date}:{name}", day=day, required=MODES[name])
+                                     f"{date}:{name}", day=day, required=MODES[name],
+                                     others_pool=everyone if MODES[name] else None)
         except llm.NoProvider as exc:
             # A spent quota in one mode must not cost the other its puzzle.
             print(f"{date} {name}: no provider: {str(exc)[:160]}")
