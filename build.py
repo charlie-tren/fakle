@@ -15,7 +15,7 @@ import prompts
 MIN_POOL = 15
 PICK_CAP = 250   # Groq's free tier allows 12K tokens a minute; ~660 headlines is ~10K
 OTHERS = 100     # headlines shown to the fake writer as a source of names
-FAKE_TRIES = 3
+FAKE_TRIES = 5
 MODES = {"normal": None, "trump": "trump"}   # mode -> word every headline in it carries
 
 

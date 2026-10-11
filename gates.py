@@ -22,6 +22,15 @@ ALLEGATION = re.compile(
     r"hospital\w*|collaps\w*|overdose\w*|drunk\w*|pregnan\w*|disease\w*)\b", re.I)
 
 
+# A state names no one, so it cannot defame anyone, and Trump-mode fakes reach for them
+# constantly. People and organisations still have to come from the day's news.
+US_STATES = set("""alabama alaska arizona arkansas california colorado connecticut delaware
+florida georgia hawaii idaho illinois indiana iowa kansas kentucky louisiana maine maryland
+massachusetts michigan minnesota mississippi missouri montana nebraska nevada new hampshire
+jersey mexico york north carolina dakota ohio oklahoma oregon pennsylvania rhode island south
+tennessee texas utah vermont virginia washington west wisconsin wyoming""".split())
+
+
 def _overlap(a: set, b: set) -> float:
     return len(a & b) / min(len(a), len(b)) if a and b else 0.0
 
@@ -45,7 +54,7 @@ def check_fake(fake: str, reals: list[str], day_titles: list[str], required: str
     if ALLEGATION.search(fake):
         fails.append("allegation")
     known = set().union(*(words(t) for t in day_titles))
-    if _proper_nouns(fake) - known:
+    if _proper_nouns(fake) - known - US_STATES:
         fails.append("new name")
     if required and required not in fw:
         fails.append("required")

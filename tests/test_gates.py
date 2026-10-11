@@ -75,3 +75,12 @@ def test_required_word_gate():
 def test_fake_ending_in_a_bracket_fails():
     # Groq copied the source label from the prompt on 11/10/2026.
     assert "format" in gates.check_fake("Spain asks China to fund migration cooperation (Reuters)", REALS, DAY)
+
+
+def test_us_state_is_not_a_new_name():
+    assert "new name" not in gates.check_fake("Trump to visit Iowa farms as China trade deal stalls", REALS, DAY + ["Trump visits farms"])
+    assert "new name" not in gates.check_fake("Trump flies to New Mexico for China trade talks", REALS, DAY + ["Trump visits farms"])
+
+
+def test_invented_person_still_fails_beside_a_state():
+    assert "new name" in gates.check_fake("Trump meets Senator Hargreaves in Iowa over China deal", REALS, DAY)

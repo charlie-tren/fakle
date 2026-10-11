@@ -64,9 +64,9 @@ def test_fake_position_is_deterministic():
 def test_failing_round_is_retried_then_mode_dropped():
     p = pool.build_pool(FIX["articles"])
     bad = ["Senator Jane Hargreaves arrested"] * 5
-    gen, calls = stub([bad, bad, bad])
+    gen, calls = stub([bad] * 5)
     assert build.make_mode(p, gen, "s") is None
-    assert calls["fake"] == 3
+    assert calls["fake"] == 5
 
 
 def test_small_pool_gives_none_without_calling_model():
@@ -148,9 +148,9 @@ def test_trump_mode_fake_must_mention_trump():
     p = pool.build_pool(FIX["articles"], trump=True)
     day = [x["text"] for x in pool.build_pool(FIX["articles"])]
     no_trump = good_fakes(rounds_of(p))
-    gen, calls = stub([no_trump, no_trump, no_trump])
+    gen, calls = stub([no_trump] * 5)
     assert build.make_mode(p, gen, "s", day=day, required="trump") is None
-    assert calls["fake"] == 3
+    assert calls["fake"] == 5
 
 
 def test_trump_mode_vocabulary_is_the_whole_day():
@@ -252,7 +252,7 @@ def test_pick_keeps_a_same_story_round_rather_than_nothing():
 def test_dropped_mode_says_why(capsys):
     p = pool.build_pool(FIX["articles"])
     bad = ["Senator Jane Hargreaves arrested"] * 5
-    gen, _ = stub([bad, bad, bad])
+    gen, _ = stub([bad] * 5)
     assert build.make_mode(p, gen, "s") is None
     out = capsys.readouterr().out
     assert "allegation" in out and "new name" in out and "Hargreaves" in out
@@ -271,3 +271,7 @@ def test_trump_fake_writer_sees_names_from_the_whole_day():
     build.make_mode(t, gen, "s", day=[x["text"] for x in everyone], required="trump", others_pool=everyone)
     fake_prompt = [x for x in seen if "hardest to believe" not in x][0]
     assert any(h in fake_prompt for h in non_trump)
+
+
+def test_five_fake_attempts():
+    assert build.FAKE_TRIES == 5
