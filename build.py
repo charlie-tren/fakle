@@ -8,12 +8,12 @@ import sys
 from pathlib import Path
 
 import gates
-import gemini
 import llm
 import pool
 import prompts
 
 MIN_POOL = 15
+PICK_CAP = 250   # Groq's free tier allows 12K tokens a minute; ~660 headlines is ~10K
 OTHERS = 80      # unpicked headlines shown to the fake writer as a source of names
 FAKE_TRIES = 3
 MODES = {"normal": None, "trump": "trump"}   # mode -> word every headline in it carries
@@ -37,6 +37,9 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
     p = [x for x in p if not gates.ALLEGATION.search(x["text"])]
     if len(p) < MIN_POOL:
         return None
+    if len(p) > PICK_CAP:
+        keep = sorted(random.Random(seed).sample(range(len(p)), PICK_CAP))
+        p = [p[i] for i in keep]
     idx = _pick(p, gen)
     if idx is None:
         return None
@@ -82,7 +85,7 @@ def build(date: str, history: dict, gen, modes=tuple(MODES)) -> dict:
     # Every mode is gated against the WHOLE day, so a Trump fake cannot restate a real
     # non-Trump story and get it labelled as made up.
     day = [x["text"] for x in pool.build_pool(arts)]
-    result = {"date": date, "model": gemini.MODEL, "providers": {}}
+    result = {"date": date, "providers": {}}
     for name in modes:
         used = {"p": None}
 
@@ -124,7 +127,7 @@ def main(argv=None) -> int:
         print(f"{a.date}: {', '.join(missing)} failed, nothing written")
         return 0 if have else 1
     # A mode already published today is never replaced, only a missing one filled.
-    result = {"date": a.date, "model": new["model"], "providers": dict(have.get("providers", {}))}
+    result = {"date": a.date, "providers": dict(have.get("providers", {}))}
     for m in MODES:
         result[m] = have.get(m) or new.get(m)
         if not have.get(m):

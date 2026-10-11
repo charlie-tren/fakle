@@ -95,7 +95,6 @@ def test_build_records_date_and_provider():
                    trump_fakes([t[i:i + 3] for i in range(0, 15, 3)])])
     result = build.build("2026-10-11", FIX, gen)
     assert result["date"] == "2026-10-11" and result["providers"]["normal"] == "stub"
-    assert result["model"] == build.gemini.MODEL
     assert result["normal"] is not None
 
 
@@ -185,10 +184,32 @@ def test_main_rebuilds_only_the_missing_mode(tmp_path, monkeypatch):
     def fake_build(date, history, gen, modes=("normal", "trump")):
         asked.append(tuple(modes))
         return {"date": date, "normal": None, "trump": [{"headlines": [], "fake": 1}],
-                "providers": {"trump": "stub"}, "model": "m"}
+                "providers": {"trump": "stub"}}
     monkeypatch.setattr(build, "build", fake_build)
     assert build.main(["--date", "2026-10-11", "--local", str(tmp_path), "--out", str(out)]) == 0
     got = json.loads(out.read_text())
     assert asked == [("trump",)]
     assert got["normal"] == [kept] and got["trump"] == [{"headlines": [], "fake": 1}]
     assert got["providers"] == {"normal": "gemini", "trump": "stub"}
+
+
+def test_pick_prompt_is_capped_for_groq_token_limit():
+    big = [{"text": f"Odd headline about thing number {i} in a town", "source": "X", "url": ""} for i in range(600)]
+    seen = []
+
+    def gen(prompt):
+        seen.append(prompt)
+        raise build.llm.NoProvider("stop after the pick")
+    try:
+        build.make_mode(big, gen, "s")
+    except build.llm.NoProvider:
+        pass
+    lines = [l for l in seen[0].splitlines() if l[:1].isdigit()]
+    assert len(lines) == build.PICK_CAP
+    # same seed, same sample
+    seen2 = []
+    try:
+        build.make_mode(big, lambda pr: (seen2.append(pr), (_ for _ in ()).throw(build.llm.NoProvider("x")))[1], "s")
+    except build.llm.NoProvider:
+        pass
+    assert seen2[0] == seen[0]

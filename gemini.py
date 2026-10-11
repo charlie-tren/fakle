@@ -12,7 +12,7 @@ import requests
 ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
 MODEL = "gemini-3.6-flash"
 TIMEOUT = 90
-RETRIES = 3
+RETRIES = 0   # the next rung of llm.LADDER is the retry; failed attempts count
 
 
 class GeminiError(RuntimeError):

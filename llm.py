@@ -1,10 +1,12 @@
-"""Where the text comes from. Gemini first, Cloudflare Workers AI if it refuses.
+"""Where the text comes from: a ladder of free providers, each tried once.
 
-Copied from Ghostwriters (dystopianist/llm.py), essay-specific parsing removed.
-Gemini's free tier is stingy per DAY, so one bad run must not leave the day empty.
+Gemini's free tier is 20 calls a day per project PER MODEL, and failed attempts count,
+so a second Gemini model is a separate allowance and the next rung is the retry.
+Groq is a different company's free tier. Cloudflare Workers AI is deliberately not
+used: its daily allowance is shared with Ghostwriters and Photocopy.
 
-    GEMINI_API_KEY                 Google AI Studio, free tier
-    CF_ACCOUNT_ID, CF_API_TOKEN    Cloudflare Workers AI, free neurons/day
+    GEMINI_API_KEY   Google AI Studio, in its own project
+    GROQ_API_KEY     console.groq.com
 """
 from __future__ import annotations
 
@@ -14,50 +16,43 @@ import requests
 
 import gemini
 
-CF_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
-CF_TIMEOUT = 120
+LADDER = [
+    ("gemini", "gemini-3.6-flash"),
+    ("gemini", "gemini-3.7-flash"),
+    ("groq", "openai/gpt-oss-120b"),
+]
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+TIMEOUT = 120
 
 
 class NoProvider(RuntimeError):
     pass
 
 
-def _cloudflare(prompt: str, temperature: float) -> str:
-    acct, tok = os.environ.get("CF_ACCOUNT_ID"), os.environ.get("CF_API_TOKEN")
-    if not (acct and tok):
-        raise NoProvider("CF_ACCOUNT_ID / CF_API_TOKEN not set")
-    r = requests.post(
-        f"https://api.cloudflare.com/client/v4/accounts/{acct}/ai/run/{CF_MODEL}",
-        headers={"Authorization": f"Bearer {tok}"},
-        json={"messages": [{"role": "user", "content": prompt}],
-              "temperature": temperature, "max_tokens": 900},
-        timeout=CF_TIMEOUT)
+def _groq(prompt: str, temperature: float, model: str) -> str:
+    key = os.environ.get("GROQ_API_KEY", "").strip()
+    if not key:
+        raise NoProvider("GROQ_API_KEY not set")
+    r = requests.post(GROQ_URL, headers={"Authorization": f"Bearer {key}"},
+                      json={"model": model, "temperature": temperature,
+                            "response_format": {"type": "json_object"},
+                            "messages": [{"role": "user", "content": prompt}]},
+                      timeout=TIMEOUT)
     if r.status_code != 200:
-        raise NoProvider(f"cloudflare HTTP {r.status_code}: {r.text[:160]}")
-    d = r.json()
-    if not d.get("success"):
-        raise NoProvider(f"cloudflare: {str(d.get('errors'))[:160]}")
-    # Workers AI hands JSON back already parsed when the model emits it.
-    res = d["result"]
-    out = res.get("response")
-    if out is None and res.get("choices"):
-        out = res["choices"][0].get("message", {}).get("content")
-    return out
+        raise NoProvider(f"HTTP {r.status_code}: {r.text[:300]}")
+    return r.json()["choices"][0]["message"]["content"]
 
 
-def generate(prompt: str, temperature: float = 0.9, prefer: str | None = None) -> tuple[str, str]:
-    """Returns (raw text, which provider produced it)."""
-    order = ["gemini", "cloudflare"]
-    if prefer:
-        order = [prefer] + [p for p in order if p != prefer]
+def generate(prompt: str, temperature: float = 0.9) -> tuple[str, str]:
+    """Returns (raw text, "provider/model" that produced it)."""
     problems = []
-    for name in order:
+    for name, model in LADDER:
         try:
             if name == "gemini":
-                return gemini.generate(prompt, temperature=temperature), "gemini"
-            return _cloudflare(prompt, temperature), "cloudflare"
+                return gemini.generate(prompt, temperature=temperature, model=model), f"{name}/{model}"
+            return _groq(prompt, temperature, model), f"{name}/{model}"
         except Exception as exc:                     # noqa: BLE001
-            problems.append(f"{name}: {type(exc).__name__} {str(exc)[:110]}")
+            problems.append(f"{name}/{model}: {type(exc).__name__} {str(exc)[:300]}")
     raise NoProvider(" | ".join(problems))
 
 
