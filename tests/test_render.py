@@ -57,8 +57,16 @@ def page_at(browser, url, width=1280):
     errors = []
     pg.on("pageerror", lambda e: errors.append(str(e)))
     pg.goto(url)
-    pg.wait_for_selector(".headline")
+    enter(pg)
     return pg, errors
+
+
+def enter(pg):
+    """Through the start screen, if it is showing, into the game."""
+    pg.wait_for_selector("#play:visible, .headline, #end:not([hidden]), #none:not([hidden])")
+    if pg.locator("#play").is_visible():
+        pg.locator("#play").click()
+    pg.wait_for_selector(".headline")
 
 
 def play_all(pg):
@@ -96,12 +104,12 @@ def test_progress_resumes_same_day_and_resets_next_day(site, browser):
     pg, _ = page_at(browser, site)
     pg.locator(".headline").first.click()
     pg.reload()
-    pg.wait_for_selector(".headline")
+    enter(pg)
     assert pg.evaluate("window.fakleState.picks.length") == 1
     pg.evaluate("""localStorage.setItem('fakle:progress',
         JSON.stringify({date:'2026-10-10', picks:[0,0,0,0,0]}))""")
     pg.reload()
-    pg.wait_for_selector(".headline")
+    enter(pg)
     assert pg.evaluate("window.fakleState.picks.length") == 0
 
 
@@ -112,7 +120,7 @@ def test_plays_when_storage_throws(site, browser):
     errors = []
     pg.on("pageerror", lambda e: errors.append(str(e)))
     pg.goto(site)
-    pg.wait_for_selector(".headline")
+    enter(pg)
     play_all(pg)
     assert errors == []
     assert pg.locator("#share").is_visible()
@@ -153,7 +161,7 @@ def test_stale_puzzle_says_none(site, browser):
 
 def test_yesterdays_puzzle_still_plays_early_morning(site, browser):
     pg = _with_date(browser, site, "2026-10-10", "2026-10-11T07:00:00+11:00")
-    pg.wait_for_selector(".headline")
+    enter(pg)
 
 
 def test_yesterdays_puzzle_retired_by_afternoon(site, browser):
@@ -186,7 +194,7 @@ def _copy_with(browser, site, clipboard_ok, exec_ok):
         "true" if exec_ok else "false"))
     pg = ctx.new_page()
     pg.goto(site)
-    pg.wait_for_selector(".headline")
+    enter(pg)
     play_all(pg)
     pg.locator("#share").click()
     pg.wait_for_function("document.getElementById('share').textContent !== 'Copy result'")
@@ -263,3 +271,50 @@ def test_one_game_no_mode_toggle(site, browser):
     assert pg.locator(".headline").count() == 4
     puzzle = json.loads((ROOT / "tests/fixtures/puzzle.json").read_text(encoding="utf-8"))
     assert pg.locator(".headline").first.inner_text() == puzzle["rounds"][0]["headlines"][0]["text"]
+
+
+
+def _fresh(browser, site):
+    ctx = context(browser)
+    pg = ctx.new_page()
+    pg.goto(site)
+    pg.wait_for_selector("#home:not([hidden])")
+    return pg
+
+
+def test_start_screen_comes_first(site, browser):
+    pg = _fresh(browser, site)
+    assert pg.locator("#play").inner_text() == "Play"
+    assert pg.locator("#home .tiles li").all_inner_texts() == ["F", "A", "K", "L", "E"]
+    assert pg.locator("#home-date").inner_text() == "Sunday 11 October"
+    assert "One is made up" in pg.locator("#home").inner_text()
+    assert pg.locator(".headline").count() == 0
+    pg.locator("#play").click()
+    assert pg.locator(".headline").count() == 4
+    assert pg.locator("#home").is_hidden()
+
+
+def test_start_screen_says_continue_mid_game(site, browser):
+    pg = _fresh(browser, site)
+    pg.locator("#play").click()
+    pg.locator(".headline").first.click()
+    pg.reload()
+    pg.wait_for_selector("#home:not([hidden])")
+    assert pg.locator("#play").inner_text() == "Continue"
+    pg.locator("#play").click()
+    assert pg.evaluate("window.fakleState.picks.length") == 1
+    assert pg.locator(".headline.is-fake").count() == 0     # round 2, not yet answered
+
+
+def test_played_today_opens_on_the_result_and_can_review(site, browser):
+    pg = _fresh(browser, site)
+    pg.locator("#play").click()
+    play_all(pg)
+    pg.reload()
+    pg.wait_for_selector("#end:not([hidden])")
+    assert pg.locator("#home").is_hidden()
+    pg.locator("#review").click()
+    assert pg.locator(".headline.is-fake").count() == 1     # round 1, revealed
+    for _ in range(5):
+        pg.locator("#next").click()
+    assert pg.locator("#end").is_visible()

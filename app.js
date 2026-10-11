@@ -168,12 +168,43 @@
     return date === y.toISOString().slice(0, 10) && Number(parts.hour) < 12;
   }
 
+  function streakLine() {
+    var st = store.get(STATS);
+    if (!st || !st.streak || !st.last) return "";
+    var y = new Date(state.date + "T00:00:00Z");
+    y.setUTCDate(y.getUTCDate() - 1);
+    var alive = st.last === state.date || st.last === y.toISOString().slice(0, 10);
+    return alive ? "Streak " + st.streak : "";
+  }
+
+  function showHome() {
+    document.body.classList.add("at-home");
+    $("home").hidden = false;
+    $("home-date").textContent = new Date(state.date + "T12:00:00Z").toLocaleDateString("en-AU",
+      { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+    $("play").textContent = state.picks.length ? "Continue" : "Play";
+    $("home-streak").textContent = streakLine();
+  }
+
+  $("play").addEventListener("click", function () {
+    document.body.classList.remove("at-home");
+    $("home").hidden = true;
+    render(state.picks.length);
+    $("round").querySelector(".headline").focus();
+  });
+
+  // Back through the day's rounds, each shown as it was revealed.
+  $("review").addEventListener("click", function () {
+    $("end").hidden = true;
+    render(0);
+  });
+
   fetch("puzzle.json", { cache: "no-cache" }).then(function (r) { return r.json(); }).then(function (p) {
     rounds = p.rounds;
     state.date = p.date;
     if (!rounds || !fresh(p.date)) { $("none").hidden = false; return; }
     var saved = store.get(PROGRESS);
     if (saved && saved.date === p.date && Array.isArray(saved.picks)) state.picks = saved.picks.slice(0, rounds.length);
-    if (state.picks.length >= rounds.length) finish(); else render(state.picks.length);
+    if (state.picks.length >= rounds.length) finish(); else showHome();
   }).catch(function () { $("none").hidden = false; });
 })();

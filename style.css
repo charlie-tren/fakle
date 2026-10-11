@@ -37,6 +37,18 @@ main{padding-top:34px;padding-bottom:40px}
   border-radius:16px;border:0;background:#ffd43b;color:var(--fg);box-shadow:0 5px 0 #c99a00;cursor:pointer}
 #next[hidden]{display:none}
 
+#home{text-align:center;color:#fff;padding-top:16px}
+body.at-home .bar .letters{visibility:hidden}
+#home .tiles{list-style:none;display:flex;justify-content:center;gap:12px;padding:0;margin:0 0 22px}
+#home .tiles li{width:84px;height:84px;border-radius:18px;display:grid;place-items:center;font-weight:800;font-size:2.9rem;padding-top:6px;
+  background:#fff;color:var(--bg);box-shadow:0 6px 0 var(--edge)}
+#home .line{font-weight:700;font-size:1.5rem;margin:0 0 6px}
+#home .date{color:#e4dcff;font-size:1.05rem;margin:0 0 28px}
+#home .meta{color:#e4dcff;font-size:1rem;margin:18px 0 0}
+#play{display:block;width:100%;max-width:20rem;margin:0 auto;font-family:var(--f);font-weight:800;font-size:1.2rem;padding:12px;
+  border-radius:16px;border:0;background:#ffd43b;color:var(--fg);box-shadow:0 5px 0 #c99a00;cursor:pointer}
+#review{display:block;width:100%;max-width:20rem;margin:0 auto 18px;font-family:var(--f);font-weight:800;font-size:1.05rem;padding:10px;
+  border-radius:16px;border:0;background:#fff;color:var(--bg);box-shadow:0 5px 0 var(--edge);cursor:pointer}
 #end{text-align:center;color:#fff}
 #end .letters{justify-content:center;gap:12px;margin:36px 0 18px}
 #end .letters li{width:84px;height:84px;border-radius:18px;font-size:2.9rem;padding-top:6px}
@@ -54,5 +66,6 @@ main{padding-top:34px;padding-bottom:40px}
   .bar .letters{gap:3px}.bar .letters li{width:28px;height:28px;border-radius:7px;border-width:2px;font-size:1.05rem;padding-top:3px}
   main{padding-top:22px}.headline{font-size:1.12rem;padding:16px 18px 12px;gap:6px}.headline a{font-size:.82rem}
   #end .letters{gap:8px;margin-top:40px}#end .letters li{width:56px;height:56px;border-radius:14px;font-size:2rem}
+  #home .tiles{gap:8px}#home .tiles li{width:56px;height:56px;border-radius:14px;font-size:2rem}#home .line{font-size:1.25rem}
 }
 @media (prefers-reduced-motion:reduce){.headline{transition:none}}
