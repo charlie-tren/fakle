@@ -15,7 +15,7 @@ import prompts
 
 TRUMP_ROUNDS = 1   # the last round of the day; every headline in it is about Trump
 CHUNK = 200      # headlines per prompt: Groq's free tier allows 8K tokens a minute
-NOMINATE = 8     # each chunk's strangest go through to the final pick
+NOMINATE = 8     # at least this many of each chunk's strangest go through to the final pick
 OTHERS = 100     # headlines shown to the fake writer as a source of names
 FAKE_TRIES = 5
 # Dropped before sampling a big pool, so the sample is dense in strange stories. Only a
@@ -114,11 +114,15 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
         # Every headline of the day is read: each chunk nominates its strangest and the
         # final pick is made from those, so the best story cannot miss a random sample.
         shortlist = []
+        # Enough nominees that the final pick has twice what it needs: two chunks of eight
+        # gave 16 finalists for an 18-headline pick on 11/10/2026, and the day failed.
+        chunks = -(-len(p) // CHUNK)
+        k = max(NOMINATE, -(-2 * min_pool // chunks))
         for c in range(0, len(p), CHUNK):
             chunk = p[c:c + CHUNK]
             try:
-                raw, _prov = gen(prompts.shortlist_prompt(chunk, NOMINATE, required))
-                shortlist += [chunk[i] for i in prompts.parse_shortlist(raw, len(chunk))[:NOMINATE]]
+                raw, _prov = gen(prompts.shortlist_prompt(chunk, k, required))
+                shortlist += [chunk[i] for i in prompts.parse_shortlist(raw, len(chunk))[:k]]
             except (ValueError, llm.NoProvider) as exc:
                 # One chunk lost costs that chunk's nominees, not the day's puzzle.
                 print(f"{seed}: chunk {c // CHUNK + 1} skipped: {exc}")

@@ -420,3 +420,23 @@ def test_general_rounds_never_use_trump_headlines():
     general = seen[0]
     lines = [l for l in general.splitlines() if l[:1].isdigit()]
     assert lines and not any("trump" in pool.words(l) for l in lines)
+
+
+
+def test_two_chunks_still_nominate_enough_for_a_full_pick():
+    p = [{"text": f"Village number {i} elects a goat to its council again", "source": "X", "url": ""} for i in range(350)]
+    seen = []
+
+    def gen(prompt):
+        seen.append(prompt)
+        if "nominate" in prompt:
+            k = int(re.search(r"nominate the (\d+)", prompt).group(1))
+            return json.dumps({"picks": list(range(k))}), "stub"
+        raise build.llm.NoProvider("stop at the final pick")
+    try:
+        build.make_mode(p, gen, "s")
+    except build.llm.NoProvider:
+        pass
+    final = seen[-1]
+    assert "most absurd" in final, "never reached the final pick"
+    assert final.count("Village number") >= 2 * 18
