@@ -7,7 +7,7 @@ DAY = REALS + ["Trump strikes diesel deal with Putin", "Mexico court finds three
 
 
 def test_good_fake_passes():
-    assert gates.check_fake("Spain asks China to fund migration cooperation with EU", REALS, DAY) == []
+    assert gates.check_fake("Spain asks UN to fund migration cooperation with China", REALS, DAY) == []
 
 
 def test_copy_of_a_real_fails():
@@ -84,3 +84,28 @@ def test_us_state_is_not_a_new_name():
 
 def test_invented_person_still_fails_beside_a_state():
     assert "new name" in gates.check_fake("Trump meets Senator Hargreaves in Iowa over China deal", REALS, DAY)
+
+
+
+def test_fake_that_extends_a_story_in_its_round_fails():
+    reals = ["Rapid-fire with RHCP drummer Chad Smith: 'I'm known as Mocha Chad'",
+             "UAE school pupils turn feathers into fertiliser as plans to combat waste take flight",
+             "Japanese brewer designs 'wobbly' beer glass to encourage responsible drinking"]
+    fake = "Chad Smith launches Mocha Chad coffee line, claims it fuels drum solos"
+    assert "borrows from its round" in gates.check_fake(fake, reals, reals)
+
+
+def test_one_shared_name_is_allowed():
+    reals = ["Japanese brewer designs 'wobbly' beer glass to encourage responsible drinking",
+             "UAE school pupils turn feathers into fertiliser as plans to combat waste take flight",
+             "China unveils robot that helps farmers breed better wheat"]
+    fake = "Japanese town pays residents to adopt abandoned vending machines"
+    assert "borrows from its round" not in gates.check_fake(fake, reals, reals + ["town pays residents to adopt abandoned vending machines"])
+
+
+def test_required_word_does_not_count_as_borrowing():
+    reals = ["Trump says Nobel committee left a stain on Norway",
+             "Trump picks Katie Zacharia as press secretary",
+             "Trump slams Zelenskyy over diesel prices"]
+    fake = "Trump orders gold-plated golf carts for Norway visit"
+    assert "borrows from its round" not in gates.check_fake(fake, reals, reals, required="trump")

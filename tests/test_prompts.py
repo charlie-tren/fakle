@@ -89,10 +89,12 @@ def test_fake_prompt_carries_the_good_fake_example():
 
 
 
-def test_fake_prompt_gives_each_round_a_word_target():
-    r = [{"text": "one two three four five six seven eight nine ten", "source": "X", "url": ""}] * 3
-    assert "Length: about 10 words." in prompts.fake_prompt([r])
-
-
 def test_no_shape_asks_for_a_short_headline():
     assert not any("nine words" in s for s in prompts.SHAPES)
+
+
+
+def test_fake_prompt_gives_a_word_range_not_a_single_target():
+    r = [{"text": "one two three four five six seven eight nine ten", "source": "X", "url": ""}] * 3
+    p = prompts.fake_prompt([r])
+    assert "Length: between 7 and 13 words." in p

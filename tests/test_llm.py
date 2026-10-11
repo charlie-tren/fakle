@@ -107,3 +107,10 @@ def test_groq_waits_up_to_three_times_for_the_minute_window(monkeypatch):
     monkeypatch.setattr(llm.requests, "post", lambda *a, **k: replies.pop(0))
     monkeypatch.setattr(llm.time, "sleep", lambda s: None)
     assert llm._groq("p", 0.9, "openai/gpt-oss-120b") == "{}"
+
+
+
+def test_ladder_has_four_gemini_models_before_groq():
+    names = [n for n, _ in llm.LADDER]
+    assert names[:4] == ["gemini"] * 4 and names[-1] == "groq"
+    assert len({m for _, m in llm.LADDER}) == len(llm.LADDER)

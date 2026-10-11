@@ -60,4 +60,9 @@ def check_fake(fake: str, reals: list[str], day_titles: list[str], required: str
         fails.append("required")
     if fake.endswith(")"):
         fails.append("format")
+    # Two names shared with one real in its own round means the fake is that story
+    # extended ("Chad Smith launches Mocha Chad coffee line" beside the real Chad Smith).
+    mine = _proper_nouns(fake) - {required}
+    if any(len(mine & _proper_nouns(r)) >= 2 for r in reals):
+        fails.append("borrows from its round")
     return fails

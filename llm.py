@@ -18,9 +18,13 @@ import requests
 
 import gemini
 
+# Each Gemini model has its own 20-a-day allowance, so four of them come before Groq,
+# whose fakes were measurably worse (padded endings, extended real stories, 11/10/2026).
 LADDER = [
     ("gemini", "gemini-3.6-flash"),
     ("gemini", "gemini-3.7-flash"),
+    ("gemini", "gemini-3.8-flash"),
+    ("gemini", "gemini-3.5-flash"),
     ("groq", "openai/gpt-oss-120b"),
 ]
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"

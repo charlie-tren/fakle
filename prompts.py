@@ -135,9 +135,12 @@ def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = N
         extra = ""
         if notes and notes.get(n):
             extra = f"\nYour last attempt for this round failed: {', '.join(notes[n])}."
-        target = round(sum(len(x["text"].split()) for x in r) / len(r))
+        # A range, the same one the length gate checks; a single target made the model
+        # pad its fakes with a stray last word to hit it.
+        mean = sum(len(x["text"].split()) for x in r) / len(r)
+        lo, hi = round(mean * 0.7 + 0.49), int(mean * 1.3)
         shape = (f"\nShape for this round: {SHAPES[(start + n) % len(SHAPES)]}."
-                 f"\nLength: about {target} words.")
+                 f"\nLength: between {lo} and {hi} words.")
         blocks.append(f"Round {n + 1}:\n{lines}{shape}{extra}")
     other = "\n".join(f"- {x['text']}" for x in (others or [])) or "(none)"
     text = FAKE.format(rounds="\n\n".join(blocks), others=other)
