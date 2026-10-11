@@ -99,3 +99,29 @@ def test_plain_headline_still_usable():
 def test_outlet_names_are_shown_plainly(raw, shown):
     arts = [{"title": "Moroccan king says migration model hit limit", "source": raw, "url": "https://a/b"}]
     assert pool.build_pool(arts)[0]["source"] == shown
+
+
+
+RSS = """<?xml version="1.0"?><rss><channel>
+<item><title>Opossum caught on fishing hook rescued from tree</title><link>https://u/1</link>
+ <pubDate>Sun, 11 Oct 2026 02:00:00 +0000</pubDate></item>
+<item><title>Watch: Kittens tour an aquarium</title><link>https://u/2</link>
+ <pubDate>Sun, 11 Oct 2026 03:00:00 +0000</pubDate></item>
+<item><title>Sewer workers find class ring missing for decades</title><link>https://u/3</link>
+ <pubDate>Wed, 07 Oct 2026 03:00:00 +0000</pubDate></item>
+</channel></rss>"""
+
+
+def test_oddity_feed_keeps_the_last_day_and_drops_video_clips():
+    import datetime as dt
+    now = dt.datetime(2026, 10, 11, 18, 0, tzinfo=dt.timezone.utc)
+    got = pool.parse_feed(RSS.encode(), "UPI", now)
+    assert got == [{"title": "Opossum caught on fishing hook rescued from tree",
+                    "source": "UPI", "url": "https://u/1"}]
+
+
+def test_a_broken_oddity_feed_costs_nothing(monkeypatch):
+    def boom(*a, **k):
+        raise OSError("down")
+    monkeypatch.setattr(pool.requests, "get", boom)
+    assert pool.load_oddities() == []

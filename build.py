@@ -241,6 +241,8 @@ def main(argv=None) -> int:
     if history is None:
         print(f"{a.date}: waiting for One Story")
         return 0
+    if not a.local:
+        history["articles"] = history["articles"] + pool.load_oddities()
     new = build(a.date, history, lambda prompt: llm.generate(prompt))
     if not new.get("normal"):
         print(f"{a.date}: general rounds failed, nothing written")

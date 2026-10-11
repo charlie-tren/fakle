@@ -43,6 +43,9 @@ The point is to show how insane the world is. Every rule below serves that.
   forced rebuild spends ~10 Gemini calls of a 20/day-per-model allowance. Cloudflare is
   deliberately unused (its allowance is shared with Ghostwriters and Photocopy).
 - A dropped mode prints which rule rejected each fake in the run log.
+- Sources: One Story's history plus `pool.ODDITIES` (UPI, NY Post, Metro, Sky News weird
+  sections, last 24h). Mirror and Daily Star weird feeds were filler; r/nottheonion via
+  redlib was rate-limited (both 11/10/2026).
 
 ## Declined
 

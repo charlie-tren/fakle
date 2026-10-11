@@ -1,9 +1,11 @@
-"""Today's real headlines, read from One Story's committed history. No feeds here."""
+"""Today's real headlines: One Story's committed history, plus a few oddity feeds."""
 from __future__ import annotations
 
 import datetime as dt
+import email.utils
 import json
 import re
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -24,6 +26,16 @@ NOT_HEADLINE = re.compile(
     r"^(how|why|what|who|where|when|did|does|do|is|are|can|could|will|would|should|"
     r"here's|inside|opinion|analysis|explainer|editorial|letters?)\b", re.I)
 DUPE = 0.6
+# One Story's outlets are hard news; the strangest stories of a day are thin in them
+# (probed 11/10/2026). Tabloid weird sections (Mirror, Daily Star) were lifestyle filler.
+ODDITIES = {
+    "UPI": "https://rss.upi.com/news/odd_news.rss",
+    "New York Post": "https://nypost.com/weird-but-true/feed/",
+    "Metro": "https://metro.co.uk/news/weird/feed/",
+    "Sky News": "https://feeds.skynews.com/feeds/rss/strange.xml",
+}
+UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/130.0 Safari/537.36"}
 
 
 def sydney_today() -> str:
@@ -39,6 +51,34 @@ def load_history(date: str, local_dir: str | None = None) -> dict | None:
         return None
     r.raise_for_status()
     return r.json()
+
+
+def parse_feed(body: bytes, source: str, now: dt.datetime) -> list[dict]:
+    out = []
+    for it in ET.fromstring(body).iter("item"):
+        title = (it.findtext("title") or "").strip()
+        try:
+            when = email.utils.parsedate_to_datetime(it.findtext("pubDate") or "")
+        except (TypeError, ValueError):
+            continue
+        if (now - when).total_seconds() > 86400 or title.lower().startswith("watch:"):
+            continue
+        out.append({"title": title, "source": source, "url": (it.findtext("link") or "").strip()})
+    return out
+
+
+def load_oddities() -> list[dict]:
+    now = dt.datetime.now(dt.timezone.utc)
+    out = []
+    for source, url in ODDITIES.items():
+        # A dead feed costs its headlines, never the puzzle.
+        try:
+            r = requests.get(url, headers=UA, timeout=30)
+            r.raise_for_status()
+            out += parse_feed(r.content, source, now)
+        except Exception as exc:
+            print(f"oddities: {source}: {type(exc).__name__}")
+    return out
 
 
 def clean_title(t: str) -> str:

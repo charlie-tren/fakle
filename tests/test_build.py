@@ -446,3 +446,17 @@ def test_two_chunks_still_nominate_enough_for_a_full_pick():
 def test_each_build_carries_an_id(tmp_path, monkeypatch):
     code, got = _main_with(tmp_path, monkeypatch, [{"n": i} for i in range(5)], [{"t": 1}])
     assert code == 0 and got.get("id")
+
+
+
+def test_oddities_join_the_day_on_a_live_build(tmp_path, monkeypatch):
+    seen = {}
+    monkeypatch.setattr(build.pool, "load_history", lambda date, local=None: {"articles": [{"title": "a"}]})
+    monkeypatch.setattr(build.pool, "load_oddities", lambda: [{"title": "b"}])
+
+    def fake(date, history, gen):
+        seen["arts"] = history["articles"]
+        return {"date": date, "normal": [{"n": i} for i in range(5)], "trump": None, "providers": {}}
+    monkeypatch.setattr(build, "build", fake)
+    assert build.main(["--date", "2026-10-11", "--out", str(tmp_path / "p.json")]) == 0
+    assert seen["arts"] == [{"title": "a"}, {"title": "b"}]
