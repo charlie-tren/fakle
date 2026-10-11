@@ -88,3 +88,14 @@ def test_non_headlines_are_not_usable(title):
 
 def test_plain_headline_still_usable():
     assert pool.usable("Candidate named Hitler Mussolini elected mayor in Peru")
+
+
+@pytest.mark.parametrize("raw, shown", [
+    ("Common Dreams (US, left)", "Common Dreams"),
+    ("BBC News - World", "BBC News"),
+    ("The Hindu (International)", "The Hindu"),
+    ("Reuters", "Reuters"),
+])
+def test_outlet_names_are_shown_plainly(raw, shown):
+    arts = [{"title": "Moroccan king says migration model hit limit", "source": raw, "url": "https://a/b"}]
+    assert pool.build_pool(arts)[0]["source"] == shown

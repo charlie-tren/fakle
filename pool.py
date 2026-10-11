@@ -53,6 +53,13 @@ def clean_title(t: str) -> str:
         t = s
 
 
+def clean_source(s: str) -> str:
+    """One Story's feed labels carry a lean tag or a section: "Common Dreams (US, left)",
+    "BBC News - World". A player wants the outlet."""
+    s = re.sub(r"\s*\([^)]*\)\s*$", "", s)
+    return re.sub(r"\s+-\s+.*$", "", s).strip()
+
+
 def words(t: str) -> set[str]:
     return set(re.findall(r"[a-z0-9]+", t.lower()))
 
@@ -83,5 +90,5 @@ def build_pool(articles: list[dict], trump: bool = False) -> list[dict]:
         url = a.get("url", "")
         # The page links these after a reveal, on an origin the whole hub shares.
         url = url if url.startswith(("https://", "http://")) else ""
-        out.append({"text": text, "source": a.get("source", ""), "url": url})
+        out.append({"text": text, "source": clean_source(a.get("source", "")), "url": url})
     return out

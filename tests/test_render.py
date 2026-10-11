@@ -256,3 +256,10 @@ def test_own_icon_set():
     html = (ROOT / "index.html").read_text(encoding="utf-8")
     for f in ("favicon.svg", "favicon.ico", "favicon-192.png", "apple-touch-icon.png"):
         assert f'href="{f}"' in html and (ROOT / f).exists()
+
+
+def test_phone_tap_targets_are_thumb_sized(site, browser):
+    pg, _ = page_at(browser, site, 390)
+    for sel in (".modes a", ".back"):
+        for el in pg.locator(sel).all():
+            assert el.bounding_box()["height"] >= 36, sel
