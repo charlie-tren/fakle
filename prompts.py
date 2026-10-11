@@ -12,7 +12,7 @@ three real and one invented, and try to spot the invented one.
 From the numbered real headlines below, choose the {n} that a reader would find
 hardest to believe are real: strange, surprising or absurd, but plainly true.
 Avoid deaths, disasters and violence. Group them into {rounds} rounds of {per}.
-Use each headline at most once.
+Use each headline at most once. Each round's headlines are about three different stories.
 
 Reply with JSON only: {{"rounds": [[i, j, k], ...]}}
 

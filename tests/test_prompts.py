@@ -44,3 +44,7 @@ def test_fake_prompt_lists_other_headlines_as_name_source():
     p = prompts.fake_prompt([POOL[0:3]], others=[POOL[20], POOL[21]])
     assert "Headline number 20" in p and "Headline number 21" in p
     assert "different event" in p
+
+
+def test_pick_prompt_asks_for_different_stories_per_round():
+    assert "three different stories" in prompts.pick_prompt(POOL)
