@@ -13,8 +13,9 @@ import llm
 import pool
 import prompts
 
-MIN_POOL = 15
-PICK_CAP = 250   # Groq's free tier allows 12K tokens a minute; ~660 headlines is ~10K
+MIN_POOL = prompts.PICK_ROUNDS * prompts.PER   # a pick needs this many headlines
+CHUNK = 200      # headlines per prompt: Groq's free tier allows 8K tokens a minute
+NOMINATE = 8     # each chunk's strangest go through to the final pick
 OTHERS = 100     # headlines shown to the fake writer as a source of names
 FAKE_TRIES = 5
 # Dropped before sampling a big pool, so the sample is dense in strange stories. Only a
@@ -80,12 +81,24 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
     p = [x for x in p if not gates.ALLEGATION.search(x["text"])]
     if len(p) < MIN_POOL:
         return None
-    if len(p) > PICK_CAP:
+    if len(p) > CHUNK:
         lively = [x for x in p if not BORING.search(x["text"])]
         p = lively if len(lively) >= MIN_POOL else p
-    if len(p) > PICK_CAP:
-        keep = sorted(random.Random(seed).sample(range(len(p)), PICK_CAP))
-        p = [p[i] for i in keep]
+    if len(p) > CHUNK:
+        # Every headline of the day is read: each chunk nominates its strangest and the
+        # final pick is made from those, so the best story cannot miss a random sample.
+        shortlist = []
+        for c in range(0, len(p), CHUNK):
+            chunk = p[c:c + CHUNK]
+            raw, _prov = gen(prompts.shortlist_prompt(chunk, NOMINATE, required))
+            try:
+                shortlist += [chunk[i] for i in prompts.parse_shortlist(raw, len(chunk))[:NOMINATE]]
+            except ValueError:
+                continue
+        p = shortlist
+        if len(p) < prompts.PICK_ROUNDS * prompts.PER:
+            print(f"{seed}: shortlist too short ({len(p)})")
+            return None
     idx = _pick(p, gen, required)
     if idx is None:
         print(f"{seed}: no valid pick")
@@ -131,15 +144,16 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
             notes[t] = ["same structure as another fake"]
             still.append(t)
         todo = sorted(still)
-        if not todo:
+        if not todo or len(fakes) >= prompts.ROUNDS:
             break
-    if todo:
+    done = sorted(fakes)[:prompts.ROUNDS]
+    if len(done) < prompts.ROUNDS:
         return None
     out = []
-    for n, r in enumerate(rounds):
+    for n, t in enumerate(done):
         pos = random.Random(f"{seed}:{n}").randrange(4)
-        heads = [dict(x) for x in r]
-        heads.insert(pos, {"text": fakes[n], "source": "", "url": ""})
+        heads = [dict(x) for x in rounds[t]]
+        heads.insert(pos, {"text": fakes[t], "source": "", "url": ""})
         out.append({"headlines": heads, "fake": pos})
     return out
 

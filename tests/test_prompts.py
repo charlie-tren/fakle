@@ -13,8 +13,8 @@ def test_pick_prompt_numbers_every_headline():
 
 
 def test_parse_pick_valid():
-    raw = json.dumps({"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]]})
-    assert prompts.parse_pick(raw, 40)[4] == [12, 13, 14]
+    raw = json.dumps({"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17]]})
+    assert prompts.parse_pick(raw, 40)[5] == [15, 16, 17]
 
 
 @pytest.mark.parametrize("rounds", [
@@ -86,3 +86,13 @@ def test_fake_prompt_gives_each_round_a_different_shape():
 
 def test_fake_prompt_carries_the_good_fake_example():
     assert "misting poles" in prompts.fake_prompt([POOL[0:3]])
+
+
+
+def test_fake_prompt_gives_each_round_a_word_target():
+    r = [{"text": "one two three four five six seven eight nine ten", "source": "X", "url": ""}] * 3
+    assert "Length: about 10 words." in prompts.fake_prompt([r])
+
+
+def test_no_shape_asks_for_a_short_headline():
+    assert not any("nine words" in s for s in prompts.SHAPES)

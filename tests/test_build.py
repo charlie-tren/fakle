@@ -15,7 +15,7 @@ def stub(fakes_by_call):
 
     def gen(prompt):
         if "most absurd" in prompt:
-            return json.dumps({"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]]}), "stub"
+            return json.dumps({"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17]]}), "stub"
         out = fakes_by_call[calls["fake"]]
         calls["fake"] += 1
         n = len(re.findall(r"^Round \d+:", prompt, re.M))
@@ -31,7 +31,7 @@ BASE = "officials say the new plan will be reviewed again later with more talks 
 def rounds_of(p):
     """The rounds make_mode will form from the stub's first 15 picks."""
     c = [x for x in p if not build.gates.ALLEGATION.search(x["text"])]
-    return [c[i:i + 3] for i in range(0, 15, 3)]
+    return [c[i:i + 3] for i in range(0, 18, 3)]
 
 
 def good_fakes(rounds_pool):
@@ -65,7 +65,7 @@ def test_fake_position_is_deterministic():
 
 def test_failing_round_is_retried_then_mode_dropped():
     p = pool.build_pool(FIX["articles"])
-    bad = ["Senator Jane Hargreaves arrested"] * 5
+    bad = ["Senator Jane Hargreaves arrested"] * 6
     gen, calls = stub([bad] * 5)
     assert build.make_mode(p, gen, "s") is None
     assert calls["fake"] == 5
@@ -94,7 +94,7 @@ def test_build_records_date_and_provider():
     p = [x for x in pool.build_pool(FIX["articles"]) if not build.gates.ALLEGATION.search(x["text"])]
     t = [x for x in pool.build_pool(FIX["articles"], trump=True) if not build.gates.ALLEGATION.search(x["text"])]
     gen, _ = stub([good_fakes(rounds_of(p)),
-                   trump_fakes([t[i:i + 3] for i in range(0, 15, 3)])])
+                   trump_fakes([t[i:i + 3] for i in range(0, 18, 3)])])
     result = build.build("2026-10-11", FIX, gen)
     assert result["date"] == "2026-10-11" and result["providers"]["normal"] == "stub"
     assert result["normal"] is not None
@@ -120,7 +120,7 @@ def test_fake_prompt_carries_unpicked_headlines():
         return base(prompt)
     build.make_mode(p, gen, "s")
     fake_prompts = [x for x in seen if "most absurd" not in x]
-    first_unpicked = [x for x in p if not build.gates.ALLEGATION.search(x["text"])][15]
+    first_unpicked = [x for x in p if not build.gates.ALLEGATION.search(x["text"])][18]
     assert fake_prompts and all(first_unpicked["text"] in x for x in fake_prompts)
 
 
@@ -142,12 +142,21 @@ def test_provider_failure_in_one_mode_keeps_the_other():
     assert result["trump"] is None
 
 
+def trump_pool():
+    """The fixture's real Trump headlines, topped up to a full pick with Trump-led
+    versions of the day's other headlines (every word already in the day's vocabulary)."""
+    t = pool.build_pool(FIX["articles"], trump=True)
+    extra = [{"text": "Trump " + x["text"][0].lower() + x["text"][1:], "source": "X", "url": ""}
+             for x in pool.build_pool(FIX["articles"]) if "trump" not in pool.words(x["text"])]
+    return t + extra[:30]
+
+
 def trump_fakes(rounds_pool):
     return ["Trump " + f for f in good_fakes(rounds_pool)]
 
 
 def test_trump_mode_fake_must_mention_trump():
-    p = pool.build_pool(FIX["articles"], trump=True)
+    p = trump_pool()
     day = [x["text"] for x in pool.build_pool(FIX["articles"])]
     no_trump = good_fakes(rounds_of(p))
     gen, calls = stub([no_trump] * 5)
@@ -157,7 +166,7 @@ def test_trump_mode_fake_must_mention_trump():
 
 def test_trump_mode_vocabulary_is_the_whole_day():
     # "Officials" appears in the day's non-Trump headlines, so a Trump fake may use it.
-    p = pool.build_pool(FIX["articles"], trump=True)
+    p = trump_pool()
     day = [x["text"] for x in pool.build_pool(FIX["articles"])] + ["Officials say the plan is on hold"]
     gen, _ = stub([trump_fakes(rounds_of(p))])
     assert build.make_mode(p, gen, "s", day=day, required="trump") is not None
@@ -196,29 +205,6 @@ def test_main_rebuilds_only_the_missing_mode(tmp_path, monkeypatch):
     assert got["providers"] == {"normal": "gemini", "trump": "stub"}
 
 
-def test_pick_prompt_is_capped_for_groq_token_limit():
-    big = [{"text": f"Odd headline about thing number {i} in a town", "source": "X", "url": ""} for i in range(600)]
-    seen = []
-
-    def gen(prompt):
-        seen.append(prompt)
-        raise build.llm.NoProvider("stop after the pick")
-    try:
-        build.make_mode(big, gen, "s")
-    except build.llm.NoProvider:
-        pass
-    lines = [l for l in seen[0].splitlines() if l[:1].isdigit()]
-    assert len(lines) == build.PICK_CAP
-    # same seed, same sample
-    seen2 = []
-    try:
-        build.make_mode(big, lambda pr: (seen2.append(pr), (_ for _ in ()).throw(build.llm.NoProvider("x")))[1], "s")
-    except build.llm.NoProvider:
-        pass
-    assert seen2[0] == seen[0]
-
-
-
 def test_same_story_detects_shared_content_words():
     assert build.same_story("Trump says Ukraine needs new president",
                             "Time for Ukraine to get new president, says Trump", "trump")
@@ -236,9 +222,9 @@ def test_pick_with_a_same_story_round_is_retried():
         "Feathers turned into fertiliser by pupils", "Baby dinosaur fossil puzzles scientists",
         "Dolly Parton records a Welsh cover", "Rogue AI agent gives police a tip",
         "Horseback archery thrills two riders", "Ragebait named youth word of the year",
-        "Grenade brought to police headquarters"]]
-    bad = {"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]]}
-    good = {"rounds": [[0, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]]}
+        "Grenade brought to police headquarters", "Penguin escapes zoo by riding a delivery van"]]
+    bad = {"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17]]}
+    good = {"rounds": [[0, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15], [16, 17, 1]]}
     answers = [bad, good]
     gen = lambda prompt: (json.dumps(answers.pop(0)), "stub")
     assert build._pick(p, gen) == good["rounds"]
@@ -246,14 +232,14 @@ def test_pick_with_a_same_story_round_is_retried():
 
 def test_pick_keeps_a_same_story_round_rather_than_nothing():
     p = [{"text": f"Ukraine president story number {i}, envoy says", "source": "X", "url": ""} for i in range(20)]
-    bad = {"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]]}
+    bad = {"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17]]}
     gen = lambda prompt: (json.dumps(bad), "stub")
     assert build._pick(p, gen) == bad["rounds"]
 
 
 def test_dropped_mode_says_why(capsys):
     p = pool.build_pool(FIX["articles"])
-    bad = ["Senator Jane Hargreaves arrested"] * 5
+    bad = ["Senator Jane Hargreaves arrested"] * 6
     gen, _ = stub([bad] * 5)
     assert build.make_mode(p, gen, "s") is None
     out = capsys.readouterr().out
@@ -261,7 +247,7 @@ def test_dropped_mode_says_why(capsys):
 
 
 def test_trump_fake_writer_sees_names_from_the_whole_day():
-    t = pool.build_pool(FIX["articles"], trump=True)
+    t = trump_pool()
     everyone = pool.build_pool(FIX["articles"])
     non_trump = [x["text"] for x in everyone if "trump" not in pool.words(x["text"])]
     seen = []
@@ -337,3 +323,35 @@ def test_small_pools_are_not_filtered_for_boredom():
     except build.llm.NoProvider:
         pass
     assert "week 39" in seen[0]
+
+
+def test_big_pool_is_shortlisted_in_chunks_and_nothing_is_skipped():
+    p = [{"text": f"Village number {i} elects a goat to its council again", "source": "X", "url": ""} for i in range(450)]
+    prompts_seen = []
+
+    def gen(prompt):
+        prompts_seen.append(prompt)
+        if "nominate" in prompt:
+            return json.dumps({"picks": [0, 1, 2, 3, 4, 5, 6, 7]}), "stub"
+        raise build.llm.NoProvider("stop at the final pick")
+    try:
+        build.make_mode(p, gen, "s")
+    except build.llm.NoProvider:
+        pass
+    chunks = [x for x in prompts_seen if "nominate" in x]
+    assert len(chunks) == 3
+    seen = "".join(chunks)
+    assert all(f"Village number {i} " in seen for i in range(450))
+    final = prompts_seen[-1]
+    assert "most absurd" in final and final.count("Village number") == 24
+
+
+def test_a_stubborn_round_is_replaced_by_the_spare():
+    p = pool.build_pool(FIX["articles"])
+    fakes = good_fakes(rounds_of(p))
+    fakes[2] = "Senator Jane Hargreaves arrested in a hotel lobby"   # round 3 never passes
+    gen, _ = stub([fakes] + [["Senator Jane Hargreaves arrested again"]] * 4)
+    rounds = build.make_mode(p, gen, "s")
+    assert rounds and len(rounds) == 5
+    texts = [h["text"] for r in rounds for h in r["headlines"]]
+    assert not any("Hargreaves" in t for t in texts)

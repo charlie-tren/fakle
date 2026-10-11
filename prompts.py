@@ -5,6 +5,7 @@ from __future__ import annotations
 import llm
 
 ROUNDS, PER = 5, 3
+PICK_ROUNDS = ROUNDS + 1   # one spare, so a round whose fake never passes does not sink the mode
 
 PICK = """You are choosing headlines for Fakle, a daily game whose whole point is to show
 how strange the world is. Players see four headlines, three real and one invented, and
@@ -31,7 +32,7 @@ TRUMP_FOCUS = ("Every headline here involves Trump: pick the craziest things Tru
 # One shape per round, so the five fakes do not share a structure (Charlie, 11/10/2026:
 # "all the fake ones have the same kind of structure - easy to guess after a while").
 SHAPES = [
-    "short and punchy, under nine words, with no trailing clause",
+    "short and punchy, with no trailing clause",
     "built around a quote in quotation marks",
     "opens with a number or a statistic",
     "a town, council, school or business doing something strange",
@@ -76,14 +77,45 @@ Other real headlines from today (for names only, not phrasing):
 def pick_prompt(pool: list[dict], required: str | None = None) -> str:
     lines = "\n".join(f"{i}. {x['text']}" for i, x in enumerate(pool))
     focus = TRUMP_FOCUS if required == "trump" else ""
-    return PICK.format(n=ROUNDS * PER, rounds=ROUNDS, per=PER, lines=lines, focus=focus)
+    return PICK.format(n=PICK_ROUNDS * PER, rounds=PICK_ROUNDS, per=PER, lines=lines, focus=focus)
+
+
+SHORTLIST = """You are helping pick headlines for Fakle, a daily game whose whole point is to
+show how strange the world is. From the numbered real headlines below, nominate the {k}
+that a reader would least believe are real: absurd, but true. The bar is "Candidate named
+Hitler Mussolini elected mayor in Peru". {focus} Nothing boring, nothing about deaths,
+disasters or violence.
+
+Reply with JSON only: {{"picks": [i, j, ...]}}
+
+{lines}"""
+
+
+def shortlist_prompt(chunk: list[dict], k: int, required: str | None = None) -> str:
+    lines = "\n".join(f"{i}. {x['text']}" for i, x in enumerate(chunk))
+    focus = TRUMP_FOCUS if required == "trump" else ""
+    return SHORTLIST.format(k=k, lines=lines, focus=focus)
+
+
+def parse_shortlist(raw, n: int) -> list[int]:
+    d = llm.extract_json(raw)
+    picks = d.get("picks") if isinstance(d, dict) else None
+    if not isinstance(picks, list):
+        raise ValueError("expected picks")
+    out = []
+    for i in picks:
+        if isinstance(i, int) and 0 <= i < n and i not in out:
+            out.append(i)
+    if not out:
+        raise ValueError("no valid picks")
+    return out
 
 
 def parse_pick(raw, pool_len: int) -> list[list[int]]:
     d = llm.extract_json(raw)
     rounds = d.get("rounds") if isinstance(d, dict) else None
-    if not isinstance(rounds, list) or len(rounds) != ROUNDS:
-        raise ValueError(f"expected {ROUNDS} rounds")
+    if not isinstance(rounds, list) or len(rounds) != PICK_ROUNDS:
+        raise ValueError(f"expected {PICK_ROUNDS} rounds")
     if any(not isinstance(r, list) or len(r) != PER for r in rounds):
         raise ValueError(f"each round needs {PER}")
     flat = [i for r in rounds for i in r]
@@ -103,7 +135,9 @@ def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = N
         extra = ""
         if notes and notes.get(n):
             extra = f"\nYour last attempt for this round failed: {', '.join(notes[n])}."
-        shape = f"\nShape for this round: {SHAPES[(start + n) % len(SHAPES)]}."
+        target = round(sum(len(x["text"].split()) for x in r) / len(r))
+        shape = (f"\nShape for this round: {SHAPES[(start + n) % len(SHAPES)]}."
+                 f"\nLength: about {target} words.")
         blocks.append(f"Round {n + 1}:\n{lines}{shape}{extra}")
     other = "\n".join(f"- {x['text']}" for x in (others or [])) or "(none)"
     text = FAKE.format(rounds="\n\n".join(blocks), others=other)
