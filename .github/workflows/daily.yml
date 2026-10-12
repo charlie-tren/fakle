@@ -54,7 +54,7 @@ jobs:
       - name: Assemble the site
         run: |
           mkdir _site
-          cp index.html app.js style.css _site/
+          cp index.html app.js style.css og-card.png _site/
           for f in puzzle.json favicon.svg favicon.ico favicon-48.png favicon-192.png apple-touch-icon.png; do
             if [ -f "$f" ]; then cp "$f" _site/; fi
           done
