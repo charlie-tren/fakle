@@ -7,6 +7,7 @@
   };
   var PROGRESS = "fakle:progress";
   var STATS = "fakle:stats";
+  var API = "https://fakle-stats.charlietrenorden.com";
 
   var state = { date: null, picks: [], done: false };
   window.fakleState = state;
@@ -67,7 +68,11 @@
     var r = rounds[i];
     var picked = state.picks[i];
     $("round-label").hidden = !(state.trumpRound && i === rounds.length - 1);
-    $("progress").textContent = "Round " + (i + 1) + " of " + rounds.length + " \u00b7 " + score() + " right";
+    var c = state.crowd;
+    var tail = state.done && c && c.players >= 3 && c.rounds[i]
+      ? Math.round(100 * c.rounds[i][r.fake] / c.players) + "% spotted it"
+      : score() + " right";
+    $("progress").textContent = "Round " + (i + 1) + " of " + rounds.length + " \u00b7 " + tail;
     var ol = $("round");
     ol.innerHTML = "";
     r.headlines.forEach(function (h, j) { ol.appendChild(row(h, j, r, picked)); });
@@ -121,6 +126,29 @@
     paintLetters();
     $("streak").textContent = st ? "Streak " + st.streak + " \u00b7 best " + st.best : "";
     countdown();
+    crowd(s);
+  }
+
+  // Each finished game posts its picks once, anonymously; the day's totals come back.
+  // Automation (navigator.webdriver) and the estate's ?nostats=1 opt-out never post.
+  function crowd(s) {
+    var saved = store.get(PROGRESS) || {};
+    var quiet = navigator.webdriver || (function () { try { return localStorage.getItem("ct.nostats"); } catch (e) { return null; } })();
+    var sent = saved.sent || quiet ? Promise.resolve() : fetch(API + "/result", {
+      method: "POST", headers: { "Content-Type": "application/json" }, keepalive: true,
+      body: JSON.stringify({ date: state.date, id: state.id, picks: state.picks, score: s })
+    }).then(function () { saved.sent = true; store.set(PROGRESS, saved); });
+    sent.catch(function () {}).then(function () {
+      return fetch(API + "/stats?date=" + state.date + "&id=" + encodeURIComponent(state.id));
+    }).then(function (r) { return r.json(); }).then(function (c) {
+      state.crowd = c;
+      var others = c.players - (quiet ? 0 : 1);
+      if (others < 3) return;
+      var below = 0, level = -(quiet ? 0 : 1);
+      c.scores.forEach(function (n, k) { if (k < s) below += n; if (k === s) level += n; });
+      $("crowd").textContent = "Better than " + Math.round(100 * (below + level / 2) / others) +
+        "% of today's players";
+    }).catch(function () {});
   }
 
   function copyFallback(t) {

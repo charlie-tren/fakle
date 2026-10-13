@@ -523,3 +523,18 @@ def test_an_already_built_day_still_lands_in_memory(tmp_path):
     assert build.main(["--date", "2026-10-11", "--local", str(tmp_path), "--out", str(out)]) == 0
     mem = json.loads((tmp_path / "memory.json").read_text())
     assert mem["recent"] == {"2026-10-11": ["Kid Rock tours"]}
+
+
+
+def test_harvest_ranks_general_fakes_by_how_many_they_fooled():
+    puzzle = {"date": "2026-10-13", "trump_round": True, "rounds": [
+        {"headlines": [{"text": "r"}, {"text": "easy fake"}], "fake": 1},
+        {"headlines": [{"text": "hard fake"}, {"text": "r"}], "fake": 0},
+        {"headlines": [{"text": "trump fake"}, {"text": "r"}], "fake": 0}]}
+    crowd = {"players": 10, "rounds": [[1, 9, 0, 0], [2, 8, 0, 0], [0, 10, 0, 0]]}
+    got = build.harvest({"hard": [{"text": "old", "fooled": 0.5, "players": 6, "date": "2026-10-12"}]},
+                        puzzle, crowd)
+    assert [h["text"] for h in got["hard"]] == ["hard fake", "old", "easy fake"]
+    # Once per day, and never on a handful of players.
+    assert build.harvest(got, puzzle, crowd) == got
+    assert build.harvest({}, puzzle, {**crowd, "players": 4}) == {}

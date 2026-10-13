@@ -9,6 +9,8 @@ import re
 import sys
 from pathlib import Path
 
+import requests
+
 import gates
 import llm
 import pool
@@ -22,6 +24,9 @@ FAKE_TRIES = 5
 JUDGE_TRIES = 2  # rounds a model can tell apart are sent back this many times at most
 MEMORY_DAYS = 7  # a story picked within this many days is not picked again
 HARD_SHOWN = 8   # fakes that fooled the most players, shown to the writer
+HARD_KEPT = 30
+HARD_MIN_PLAYERS = 5
+CROWD = "https://fakle-stats.charlietrenorden.com/stats?date={date}&id={id}"
 # Dropped before sampling a big pool, so the sample is dense in strange stories. Only a
 # filter on the full day: Trump mode's pool is small and its politics are the point.
 BORING = re.compile(
@@ -72,6 +77,32 @@ def remember(mem: dict, date: str, rounds: list[dict]) -> dict:
     recent[date] = [h["text"] for r in rounds for i, h in enumerate(r.get("headlines", []))
                     if i != r.get("fake")]
     return {**mem, "recent": recent}
+
+
+def harvest(mem: dict, puzzle: dict, crowd: dict) -> dict:
+    """A finished day's general-round fakes, ranked by how many players they fooled."""
+    n = crowd.get("players", 0)
+    if n < HARD_MIN_PLAYERS or puzzle.get("date") in {h["date"] for h in mem.get("hard", [])}:
+        return mem
+    rounds = puzzle.get("rounds") or []
+    general = rounds[:-1] if puzzle.get("trump_round") else rounds
+    new = []
+    for r, counts in zip(general, crowd.get("rounds", [])):
+        fooled = 1 - counts[r["fake"]] / n
+        new.append({"text": r["headlines"][r["fake"]]["text"], "fooled": round(fooled, 3),
+                    "players": n, "date": puzzle["date"]})
+    hard = sorted(mem.get("hard", []) + new, key=lambda h: -h["fooled"])[:HARD_KEPT]
+    return {**mem, "hard": hard}
+
+
+def fetch_crowd(puzzle: dict) -> dict:
+    try:
+        r = requests.get(CROWD.format(date=puzzle["date"], id=puzzle.get("id", "")), timeout=30)
+        r.raise_for_status()
+        return r.json()
+    except Exception as exc:
+        print(f"crowd: {type(exc).__name__}")
+        return {}
 
 
 def recent_texts(mem: dict, date: str) -> list[str]:
@@ -332,6 +363,9 @@ def main(argv=None) -> int:
             mem_path.write_text(json.dumps(remember(mem, a.date, have["rounds"]), ensure_ascii=False),
                                 encoding="utf-8")
         return 0
+    # Yesterday's puzzle is still on disk: score its fakes before it is replaced.
+    if have.get("rounds") and have.get("date") != a.date and not a.local:
+        mem = harvest(mem, have, fetch_crowd(have))
     history = pool.load_history(a.date, a.local)
     if history is None:
         print(f"{a.date}: waiting for One Story")

@@ -1,0 +1,14 @@
+# Deploy: cd worker && npx wrangler deploy
+# Schema: npx wrangler d1 execute fakle-stats --remote --file schema.sql
+name = "fakle-stats"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+routes = [
+  { pattern = "fakle-stats.charlietrenorden.com", custom_domain = true }
+]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "fakle-stats"
+database_id = "2a62bce1-5544-4baf-a7f5-10093fddf310"

@@ -58,6 +58,8 @@ body.at-home .bar .letters{visibility:hidden}
 .score{font-weight:800;font-size:3.2rem;margin:0}
 #share-text{display:none}
 #share{margin:22px auto 18px}
+.crowd{font-size:1.1rem;font-weight:600;margin:6px 0 0}
+.crowd:empty{display:none}
 .streak,.countdown{color:#e4dcff;font-size:1rem;margin:8px 0 0}
 #none{color:#fff;font-weight:700;font-size:1.4rem;text-align:center;margin-top:60px}
 

@@ -15,11 +15,25 @@ ROOT = Path(__file__).resolve().parents[1]
 NOW = "2026-10-11T09:00:00+11:00"
 
 
+CROWD = {"players": 11, "scores": [1, 2, 3, 2, 2, 1],
+         "rounds": [[5, 4, 1, 1], [3, 6, 1, 1], [2, 2, 5, 2], [1, 1, 8, 1], [4, 1, 5, 1]]}
+POSTS = []
+
+
+def _crowd(route):
+    if route.request.method == "POST":
+        POSTS.append(route.request.post_data)
+        return route.fulfill(status=204, body="")
+    route.fulfill(json=CROWD)
+
+
 def context(browser, **kw):
     ctx = browser.new_context(**kw)
     # The page must not depend on a third-party font server, and nor may its tests.
     ctx.route("**/fonts.googleapis.com/**", lambda r: r.abort())
     ctx.route("**/fonts.gstatic.com/**", lambda r: r.abort())
+    # Today's players, as the stats Worker would report them. Never the live Worker.
+    ctx.route("**/fakle-stats.charlietrenorden.com/**", _crowd)
     ctx.add_init_script("""(() => { const T = new Date('%s').getTime(); const D = Date;
       class F extends D { constructor(...a) { super(...(a.length ? a : [T])); } static now() { return T; } }
       window.Date = F; })()""" % NOW)
@@ -364,3 +378,45 @@ def test_progress_from_an_earlier_build_of_the_same_day_is_dropped(site, browser
     pg.reload()
     enter(pg)
     assert pg.evaluate("window.fakleState.picks.length") == 0
+
+
+
+def test_end_screen_compares_with_todays_players(site, browser):
+    pg, _ = page_at(browser, site)
+    play_all(pg)   # first headline every round: 0 of 5 on the fixture
+    # One of 11 also scored 0 and none lower: better than half of one in eleven.
+    pg.wait_for_function("document.getElementById('crowd').textContent.length > 0")
+    assert pg.locator("#crowd").text_content() == "Better than 5% of today's players"
+
+
+def test_review_says_how_many_spotted_each_fake(site, browser):
+    pg, _ = page_at(browser, site)
+    play_all(pg)
+    pg.wait_for_function("document.getElementById('crowd').textContent.length > 0")
+    pg.locator("#review").click()
+    # Round 1's fake is at position 1, which 4 of 11 picked.
+    assert pg.locator("#progress").text_content().endswith("36% spotted it")
+
+
+def test_automation_never_posts_a_result(site, browser):
+    POSTS.clear()
+    pg, _ = page_at(browser, site)
+    play_all(pg)
+    pg.wait_for_function("document.getElementById('crowd').textContent.length > 0")
+    assert POSTS == []
+
+
+
+def test_a_person_posts_their_result_once(site, browser):
+    POSTS.clear()
+    ctx = context(browser, viewport={"width": 1280, "height": 900})
+    ctx.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => false})")
+    pg = ctx.new_page()
+    pg.goto(site)
+    enter(pg)
+    play_all(pg)
+    pg.wait_for_function("document.getElementById('crowd').textContent.length > 0")
+    pg.reload()
+    pg.wait_for_selector("#end:not([hidden])")
+    pg.wait_for_function("document.getElementById('crowd').textContent.length > 0")
+    assert len(POSTS) == 1 and json.loads(POSTS[0])["picks"] == [0, 0, 0, 0, 0]
