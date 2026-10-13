@@ -5,3 +5,4 @@ trial/
 .superpowers/
 puzzle.json
 memory.json
+.wrangler/
