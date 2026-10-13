@@ -112,12 +112,11 @@
     $("end").hidden = false;
     $("score").textContent = s + " of " + rounds.length;
     var d = state.date.split("-");
-    // A target for a fake spotted, a clown for one that fooled you.
-    var squares = rounds.map(function (r, i) {
-      return String.fromCodePoint(state.picks[i] === r.fake ? 0x1F3AF : 0x1F921);
+    var dots = rounds.map(function (r, i) {
+      return String.fromCodePoint(state.picks[i] === r.fake ? 0x1F7E2 : 0x1F534);
     }).join("");
     $("share-text").textContent = "Fakle " +
-      Number(d[2]) + "/" + Number(d[1]) + " " + s + "/" + rounds.length + "\n" + squares;
+      Number(d[2]) + "/" + Number(d[1]) + " " + s + "/" + rounds.length + "\n" + dots;
     var st = recordStats();
     paintLetters();
     $("streak").textContent = st ? "Streak " + st.streak + " \u00b7 best " + st.best : "";

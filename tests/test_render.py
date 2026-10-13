@@ -243,12 +243,11 @@ def test_font_stylesheet_does_not_block_render():
     assert 'media="print"' in link and "onload=" in link
 
 
-def test_share_uses_target_and_clown(site, browser):
+def test_share_uses_green_and_red_circles(site, browser):
     pg, _ = page_at(browser, site)
     play_all(pg)
-    share = pg.locator("#share-text").text_content()
-    assert chr(0x1F3AF) in share or chr(0x1F921) in share
-    assert chr(0x1F7E9) not in share and chr(0x1F7E5) not in share
+    grid = pg.locator("#share-text").text_content().splitlines()[1]
+    assert len(grid) == 5 and set(grid) <= {chr(0x1F7E2), chr(0x1F534)}
 
 
 def test_own_icon_set():
