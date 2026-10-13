@@ -23,8 +23,9 @@ JUNK = re.compile(r"(scores|live updates|live blog|newsletter|podcast|watch:|vid
 # the "Did a baby dinosaur eat its own kind?" title), and a title cut off with an
 # ellipsis is a fragment.
 NOT_HEADLINE = re.compile(
-    r"^(how|why|what|who|where|when|did|does|do|is|are|can|could|will|would|should|"
-    r"here's|inside|opinion|analysis|explainer|editorial|letters?)\b", re.I)
+    r"^((how|why|what|who|where|when|did|does|do|is|are|can|could|will|would|should|"
+    r"here's|inside|opinion|analysis|explainer|editorial|letters?|from the archive|"
+    r"the conversation)\b|(?-i:[A-Z][A-Z ]{3,}:))", re.I)
 DUPE = 0.6
 # One Story's outlets are hard news; the strangest stories of a day are thin in them
 # (probed 11/10/2026). Tabloid weird sections (Mirror, Daily Star) were lifestyle filler.

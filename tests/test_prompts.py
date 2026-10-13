@@ -160,3 +160,9 @@ def test_fake_prompt_shows_fakes_that_fooled_players():
     p = prompts.fake_prompt([POOL[0:3]], hard=["Town council appoints official goat herder"])
     assert "official goat herder" in p
     assert "official goat herder" not in prompts.fake_prompt([POOL[0:3]])
+
+
+
+def test_trump_fakes_read_like_his_coverage_not_satire():
+    assert "whimsical appointment" in prompts.fake_prompt([POOL[0:3]], required="trump")
+    assert "whimsical appointment" not in prompts.fake_prompt([POOL[0:3]])

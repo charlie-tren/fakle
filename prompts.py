@@ -178,7 +178,10 @@ def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = N
     if required:
         # Every real in the round carries it, so a fake without it is the answer.
         text = text.replace("Rules:\n", f"Rules:\n- Every fake must mention {required.title()}, "
-                            "but not always as the first word.\n", 1)
+                            "but not always as the first word.\n"
+                            "- Write it the way the day's real coverage of him reads: a post, an "
+                            "order, a feud, a remark, a ruling against his administration. Never a "
+                            "whimsical appointment or stunt: those read as satire.\n", 1)
     return text
 
 

@@ -125,3 +125,10 @@ def test_a_broken_oddity_feed_costs_nothing(monkeypatch):
         raise OSError("down")
     monkeypatch.setattr(pool.requests, "get", boom)
     assert pool.load_oddities() == []
+
+
+
+def test_section_labels_are_not_headlines():
+    assert not pool.usable("THE CONVERSATION: How pond algae led to a Nobel and new ways to study the brain")
+    assert not pool.usable("From the archive: The songs that all Mexicans magically know")
+    assert pool.usable("Busan kids' deep bows for free croissants go viral")
