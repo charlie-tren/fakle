@@ -40,10 +40,12 @@ def rounds_of(p):
 def good_fakes(rounds_pool):
     # Lowercase after the first word, so no new names; common words only, so no
     # overlap; sized to its round's mean so the length gate passes. Distinct per round.
+    # Each opens on a different name from the day, so it is neither vague nor counted.
+    names = sorted(build.gates._mid_caps([x["text"] for r in rounds_pool for x in r]))
     out = []
     for i, r in enumerate(rounds_pool):
         n = round(sum(len(x["text"].split()) for x in r) / len(r))
-        out.append(" ".join([str(i + 2)] + BASE[:n - 2] + [f"w{i}"]))
+        out.append(" ".join([names[i].title()] + BASE[:n - 2] + ["zq" + "abcdef"[i]]))
     return out
 
 
@@ -493,7 +495,7 @@ def test_the_judge_sends_back_a_fake_it_spots(monkeypatch):
     p = pool.build_pool(FIX["articles"])
     rounds_pool = rounds_of(p)
     first = good_fakes(rounds_pool)
-    second = [f.replace("w0", "x0") for f in first]
+    second = [f.replace("zqa", "zxa") for f in first]
     seen = {"judge": 0}
     base, calls = stub([first, second])
 
@@ -503,7 +505,7 @@ def test_the_judge_sends_back_a_fake_it_spots(monkeypatch):
             guesses = []
             for n, block in enumerate(re.split(r"^Round \d+:\n", prompt, flags=re.M)[1:]):
                 lines = [l for l in block.splitlines() if re.match(r"^[1-4]\. ", l)][:4]
-                fake = next(i for i, l in enumerate(lines) if re.search(r"\b[wx]\d\b", l.lower()))
+                fake = next(i for i, l in enumerate(lines) if re.search(r"\bz[qx][a-f]\b", l.lower()))
                 # Spots round 1 the first time; wrong everywhere else.
                 right = seen["judge"] == 1 and n == 0
                 guesses.append(fake + 1 if right else (fake + 1) % 4 + 1)
@@ -512,7 +514,7 @@ def test_the_judge_sends_back_a_fake_it_spots(monkeypatch):
     out = build.make_mode(p, gen, "s")
     texts = [h["text"] for r in out for h in r["headlines"]]
     assert seen["judge"] >= 1 and calls["fake"] == 2
-    assert any("x0" in t.lower() for t in texts)
+    assert any("zxa" in t.lower() for t in texts)
 
 
 

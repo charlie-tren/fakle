@@ -15,7 +15,7 @@ ALLEGATION = re.compile(
     r"accus\w*|alleg\w*|su(e|ed|es|ing)|lawsuit\w*|probe\w*|investigat\w*|"
     r"steal\w*|stole\w*|theft\w*|thie\w*|smuggl\w*|corrupt\w*|fraud\w*|brib\w*|"
     r"launder\w*|embezzl\w*|scam\w*|drug\w*|traffick\w*|"
-    r"rape\w*|sex\w*|assault\w*|abus\w*|harass\w*|affair\w*|grop\w*|"
+    r"rape\w*|sex\w*|porn\w*|assault\w*|abus\w*|harass\w*|affair\w*|grop\w*|"
     r"murder\w*|kill\w*|shot|shoot\w*|stab\w*|attack\w*|suicid\w*|"
     r"dies|died|dead|death\w*|dying|"
     r"cancer\w*|dementia|stroke\w*|diagnos\w*|ill|illness\w*|sick\w*|surger\w*|"
@@ -88,7 +88,12 @@ def check_fake(fake: str, reals: list[str], day_titles: list[str], required: str
     # The first word is capitalised either way; it is a name if the day writes it as one.
     if toks and toks[0].lower() != required and toks[0].lower() in _mid_caps(day_titles) | US_STATES:
         named.append(toks[0])
-    if not named and not re.search(r"\d", fake):
+    # A number only where its round has one: asked for "a concrete detail", every fake
+    # on the 14/10 trial carried a figure and almost no real did.
+    counted = re.search(r"\d", fake)
+    if counted and not any(re.search(r"\d", r) for r in reals):
+        fails.append("number")
+    if not named and not counted:
         fails.append("vague")
     # Two names shared with one real in its own round means the fake is that story
     # extended ("Chad Smith launches Mocha Chad coffee line" beside the real Chad Smith).

@@ -149,7 +149,9 @@ def test_fake_prompt_asks_for_specifics_in_the_round_area():
 def test_judge_prompt_and_parse():
     p = prompts.judge_prompt([["a", "b", "c", "d"], ["e", "f", "g", "h"]])
     assert "Round 2" in p and "4. h" in p
-    assert prompts.parse_judge(json.dumps({"guesses": [2, 4]}), 2) == [1, 3]
+    assert prompts.parse_judge(json.dumps({"guesses": [2, 4], "why": ["vague", "too neat"]}), 2) == \
+        ([1, 3], ["vague", "too neat"])
+    assert prompts.parse_judge(json.dumps({"guesses": [2, 4]}), 2) == ([1, 3], ["", ""])
     with pytest.raises(ValueError):
         prompts.parse_judge(json.dumps({"guesses": [5, 1]}), 2)
 

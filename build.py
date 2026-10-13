@@ -32,7 +32,8 @@ CROWD = "https://fakle-stats.charlietrenorden.com/stats?date={date}&id={id}"
 BORING = re.compile(
     r"\b(shares?|stocks?|markets?|earnings|profit|revenue|investors?|gdp|inflation|interest rates?|"
     r"budget|tariffs?|summit|talks|ceasefire|sanctions?|minister|parliament|election|poll|"
-    r"league|cup|coach|match|semi-final|final|quarterly|forecasts?)\b", re.I)
+    r"league|cup|coach|match|semi-final|final|quarterly|forecasts?|opposition|protests?|"
+    r"lawmakers?|senators?|congress|ministry)\b", re.I)
 MODES = {"normal": None, "trump": "trump"}   # mode -> word every headline in it carries
 # Grim stories are not the strange-world game, however odd (14/10/2026: a plane crash and
 # "decaying bodies" made the general rounds). Trump's round keeps its politics.
@@ -166,7 +167,7 @@ def _pick(p, gen, required=None, n=prompts.PICK_ROUNDS):
     return best
 
 
-def _judged(rounds, fakes, done, gen, seed) -> list[int]:
+def _judged(rounds, fakes, done, gen, seed) -> dict[int, str]:
     """Rounds where a model, shown the four as a player sees them, picks the fake."""
     shown, where = [], []
     for t in done:
@@ -177,13 +178,13 @@ def _judged(rounds, fakes, done, gen, seed) -> list[int]:
         where.append(pos)
     try:
         raw, _prov = gen(prompts.judge_prompt(shown))
-        guesses = prompts.parse_judge(raw, len(done))
+        guesses, why = prompts.parse_judge(raw, len(done))
     except (ValueError, llm.NoProvider) as exc:
         print(f"{seed}: judge skipped: {exc}")
-        return []
-    caught = [t for t, g, w in zip(done, guesses, where) if g == w]
-    for t in caught:
-        print(f"{seed} round {t + 1} spotted by the judge: {fakes[t]}")
+        return {}
+    caught = {t: w for t, g, pos, w in zip(done, guesses, where, why) if g == pos}
+    for t, w in caught.items():
+        print(f"{seed} round {t + 1} spotted by the judge ({w}): {fakes[t]}")
     return caught
 
 
@@ -284,16 +285,18 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
         caught = _judged(rounds, fakes, done, gen, seed)
         if not caught:
             break
-        note = ["a reader spotted it as the invented one: make it as specific and "
-                "matter-of-fact as the real ones"]
+        spotted = sorted(caught)
+        # The judge's own reason goes back with it: the writer fixes the actual tell.
+        notes2 = {k: [f"a reader spotted it as the invented one ({caught[t] or 'it read as made up'}); "
+                      "fix that, and keep it as matter-of-fact as the real ones"]
+                  for k, t in enumerate(spotted)}
         try:
-            raw, _prov = gen(prompts.fake_prompt([rounds[t] for t in caught],
-                                                 {k: note for k in range(len(caught))},
+            raw, _prov = gen(prompts.fake_prompt([rounds[t] for t in spotted], notes2,
                                                  others, required, seed, hard))
-            got = prompts.parse_fakes(raw, len(caught))
+            got = prompts.parse_fakes(raw, len(spotted))
         except (ValueError, llm.NoProvider):
             continue
-        for t, f in zip(caught, got):
+        for t, f in zip(spotted, got):
             if gates.check_fake(f, [x["text"] for x in rounds[t]], day, required):
                 continue
             trial = {**fakes, t: match_case(pool.clean_title(f), [x["text"] for x in rounds[t]])}

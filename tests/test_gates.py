@@ -155,3 +155,16 @@ def test_a_fake_with_no_name_and_no_number_is_vague():
     assert "vague" in gates.check_fake("Local farmers test robotic scarecrows across the state", reals, day)
     assert "vague" not in gates.check_fake("Delaware farmers test robotic scarecrows across fields", reals, day)
     assert "vague" not in gates.check_fake("Farmers test 40 robotic scarecrows across the state", reals, day)
+
+
+
+def test_a_number_only_where_its_round_has_one():
+    day = ["Whitehorse council buys plastic coyotes", "Seoul cafe hires a robot"]
+    plain = ["Whitehorse council buys plastic coyotes"] * 3
+    assert "number" in gates.check_fake("Seoul cafe hires 20 robot baristas for the winter", plain, day)
+    counted = ["Woman, 61, planks for 5 hours"] * 3
+    assert "number" not in gates.check_fake("Seoul cafe hires 20 robot baristas for winter", counted, day)
+
+
+def test_pornography_is_barred_like_the_rest_of_sex():
+    assert gates.ALLEGATION.search("UK students call for uniforms to be banned in pornography")

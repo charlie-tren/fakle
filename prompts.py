@@ -35,7 +35,8 @@ Right: "Japanese brewer designs 'wobbly' beer glass to encourage responsible dri
 "Russian taxi drivers told to use Google Maps after drones hit Yandex", "Every game could be
 the last one for Don Manuel, the 105-year-old chess player".
 Wrong, however important: "Hezbollah outlines financial aid plan for Lebanese with
-destroyed homes", "Poland blames Starlink sabotage on Russia".
+destroyed homes", "Poland blames Starlink sabotage on Russia", "India's opposition marches
+on Supreme Court as protests gain ground".
 """
 
 TRUMP_FOCUS = ("Every headline here involves Trump: pick the craziest things Trump said, "
@@ -78,8 +79,8 @@ Rules:
 - Same spelling convention as its three (American if they are American).
 - Plausible, a little strange, never a joke.
 - As specific as the real ones: a named place, organisation or person from the lists
-  below, and a concrete detail (a number, an age, an object). Vague fakes ("local council
-  chief", "three pilots", "officials") are the first ones players spot.
+  below. Vague fakes ("local council chief", "three pilots", "officials") are the first
+  ones players spot. Use a number only if a real one in its round has one.
 - Only name people, places and organisations that appear somewhere in the real
   headlines below, including the list of other real headlines from today.
 - Never claim anyone committed a crime, did anything sexual, is ill or died.
@@ -192,7 +193,8 @@ def parse_fakes(raw, n: int) -> list[str]:
 JUDGE = """Each round below has four headlines. Three are real headlines from today's news
 and one was written by AI. For each round, say which one was written by AI.
 
-Reply with JSON only: {{"guesses": [n, ...]}}, one number from 1 to 4 per round, in order.
+Reply with JSON only: {{"guesses": [n, ...], "why": ["...", ...]}}, one number from 1 to 4
+per round, in order, and for each a few words on what gave it away.
 
 {rounds}"""
 
@@ -203,10 +205,12 @@ def judge_prompt(rounds: list[list[str]]) -> str:
     return JUDGE.format(rounds="\n\n".join(blocks))
 
 
-def parse_judge(raw, n: int) -> list[int]:
-    """The judge's guesses as 0-based positions."""
+def parse_judge(raw, n: int) -> tuple[list[int], list[str]]:
+    """The judge's guesses as 0-based positions, and what gave each away."""
     d = llm.extract_json(raw)
     g = d.get("guesses") if isinstance(d, dict) else None
     if not isinstance(g, list) or len(g) != n or not all(isinstance(x, int) and 1 <= x <= 4 for x in g):
         raise ValueError(f"expected {n} guesses")
-    return [x - 1 for x in g]
+    why = d.get("why")
+    why = [str(w)[:200] for w in why] if isinstance(why, list) and len(why) == n else [""] * n
+    return [x - 1 for x in g], why
