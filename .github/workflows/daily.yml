@@ -43,7 +43,9 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install -r requirements.txt
       - name: Fetch the live puzzle
-        run: curl -sf https://charlietrenorden.com/fakle/puzzle.json -o puzzle.json || rm -f puzzle.json
+        run: |
+          curl -sf https://charlietrenorden.com/fakle/puzzle.json -o puzzle.json || rm -f puzzle.json
+          curl -sf https://charlietrenorden.com/fakle/memory.json -o memory.json || rm -f memory.json
       - name: Build
         id: build
         continue-on-error: true
@@ -55,7 +57,7 @@ jobs:
         run: |
           mkdir _site
           cp index.html app.js style.css og-card.png _site/
-          for f in puzzle.json favicon.svg favicon.ico favicon-48.png favicon-192.png apple-touch-icon.png; do
+          for f in puzzle.json memory.json favicon.svg favicon.ico favicon-48.png favicon-192.png apple-touch-icon.png; do
             if [ -f "$f" ]; then cp "$f" _site/; fi
           done
           ls -la _site

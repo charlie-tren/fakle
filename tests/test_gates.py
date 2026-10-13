@@ -146,3 +146,12 @@ def test_same_story_matches_word_forms():
              "Candidate named Hitler Mussolini elected mayor in Peru"]
     fake = "Canadian health board bans plank competitions longer than three hours nationwide"
     assert "same story" in gates.check_fake(fake, reals, reals)
+
+
+
+def test_a_fake_with_no_name_and_no_number_is_vague():
+    day = ["Delaware farmers test new tractors this week", "Seoul council opens a robot cafe"]
+    reals = ["Delaware farmers test new tractors this week"] * 3
+    assert "vague" in gates.check_fake("Local farmers test robotic scarecrows across the state", reals, day)
+    assert "vague" not in gates.check_fake("Delaware farmers test robotic scarecrows across fields", reals, day)
+    assert "vague" not in gates.check_fake("Farmers test 40 robotic scarecrows across the state", reals, day)

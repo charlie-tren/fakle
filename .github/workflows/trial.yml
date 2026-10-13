@@ -1,0 +1,24 @@
+# Builds puzzles for past dates with the real models and prints them. Nothing is
+# deployed or committed. Spends free-tier calls: ~15 a date.
+name: trial
+on:
+  workflow_dispatch:
+    inputs:
+      dates:
+        description: "Space-separated YYYY-MM-DD"
+        required: true
+permissions:
+  contents: read
+jobs:
+  trial:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+      - env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          DATES: ${{ inputs.dates }}
+        run: python tools/trial.py $DATES

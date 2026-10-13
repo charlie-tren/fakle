@@ -59,6 +59,10 @@ def _proper_nouns(t: str) -> set[str]:
     return {w for tok in toks if tok[0].isupper() for w in words(tok) if len(w) > 1}
 
 
+def _mid_caps(titles: list[str]) -> set[str]:
+    return {t.lower() for title in titles for t in re.findall(r"[A-Za-z][\w']*", title)[1:] if t[0].isupper()}
+
+
 def check_fake(fake: str, reals: list[str], day_titles: list[str], required: str | None = None) -> list[str]:
     fake = clean_title(fake)
     fails = []
@@ -77,6 +81,15 @@ def check_fake(fake: str, reals: list[str], day_titles: list[str], required: str
         fails.append("required")
     if fake.endswith(")"):
         fails.append("format")
+    # A real headline names its subject or counts something; "local council chief" and
+    # "three pilots" were the fakes players spotted first (14/10/2026).
+    toks = re.findall(r"[A-Za-z][\w']*", fake)
+    named = [t for t in toks[1:] if t[0].isupper() and t.lower() != required]
+    # The first word is capitalised either way; it is a name if the day writes it as one.
+    if toks and toks[0].lower() != required and toks[0].lower() in _mid_caps(day_titles) | US_STATES:
+        named.append(toks[0])
+    if not named and not re.search(r"\d", fake):
+        fails.append("vague")
     # Two names shared with one real in its own round means the fake is that story
     # extended ("Chad Smith launches Mocha Chad coffee line" beside the real Chad Smith).
     mine = _proper_nouns(fake) - {required}

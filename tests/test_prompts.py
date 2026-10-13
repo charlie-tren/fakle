@@ -108,13 +108,12 @@ def test_pick_prompt_and_parse_take_a_round_count():
 
 def test_fake_prompt_shows_the_spin_off_it_must_not_write():
     p = prompts.fake_prompt([POOL[0:3]])
-    assert "plank competitions" in p and "different topic" in p
+    assert "plank competitions" in p and "different story" in p
 
 
 def test_no_invented_quote_from_a_named_person():
     p = prompts.fake_prompt([POOL[0:3]])
     assert "Never put invented words in a named person's mouth" in p
-    assert any("unnamed" in s for s in prompts.SHAPES if "quote" in s)
 
 
 
@@ -122,3 +121,40 @@ def test_fake_prompt_warns_off_famous_brands():
     # Charlie, 11/10/2026: "apple one is too obviously fake".
     p = prompts.fake_prompt([POOL[0:3]])
     assert "household-name" in p and "Apple patents" in p
+
+
+
+def test_pick_prompt_groups_rounds_by_area_without_dropping_stranger_stories():
+    p = prompts.pick_prompt(POOL)
+    assert "broad area" in p and "different area" in p
+    assert "never leave out a stranger headline" in p.lower()
+
+
+def test_pick_prompt_shows_funny_and_dull_examples():
+    p = prompts.pick_prompt(POOL)
+    assert "wobbly" in p and "Starlink sabotage" in p
+
+
+def test_no_shape_is_a_quote():
+    # 14/10/2026: both quote-shaped fakes ("'We will protect our farms,' says local council
+    # chief") were the vaguest headline in their round.
+    assert not any("quot" in s for s in prompts.SHAPES)
+
+
+def test_fake_prompt_asks_for_specifics_in_the_round_area():
+    p = prompts.fake_prompt([POOL[0:3]])
+    assert "same broad area" in p and "specific" in p
+
+
+def test_judge_prompt_and_parse():
+    p = prompts.judge_prompt([["a", "b", "c", "d"], ["e", "f", "g", "h"]])
+    assert "Round 2" in p and "4. h" in p
+    assert prompts.parse_judge(json.dumps({"guesses": [2, 4]}), 2) == [1, 3]
+    with pytest.raises(ValueError):
+        prompts.parse_judge(json.dumps({"guesses": [5, 1]}), 2)
+
+
+def test_fake_prompt_shows_fakes_that_fooled_players():
+    p = prompts.fake_prompt([POOL[0:3]], hard=["Town council appoints official goat herder"])
+    assert "official goat herder" in p
+    assert "official goat herder" not in prompts.fake_prompt([POOL[0:3]])

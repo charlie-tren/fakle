@@ -19,6 +19,9 @@ CHUNK = 200      # headlines per prompt: Groq's free tier allows 8K tokens a min
 NOMINATE = 8     # at least this many of each chunk's strangest go through to the final pick
 OTHERS = 100     # headlines shown to the fake writer as a source of names
 FAKE_TRIES = 5
+JUDGE_TRIES = 2  # rounds a model can tell apart are sent back this many times at most
+MEMORY_DAYS = 7  # a story picked within this many days is not picked again
+HARD_SHOWN = 8   # fakes that fooled the most players, shown to the writer
 # Dropped before sampling a big pool, so the sample is dense in strange stories. Only a
 # filter on the full day: Trump mode's pool is small and its politics are the point.
 BORING = re.compile(
@@ -26,6 +29,13 @@ BORING = re.compile(
     r"budget|tariffs?|summit|talks|ceasefire|sanctions?|minister|parliament|election|poll|"
     r"league|cup|coach|match|semi-final|final|quarterly|forecasts?)\b", re.I)
 MODES = {"normal": None, "trump": "trump"}   # mode -> word every headline in it carries
+# Grim stories are not the strange-world game, however odd (14/10/2026: a plane crash and
+# "decaying bodies" made the general rounds). Trump's round keeps its politics.
+DARK = re.compile(
+    r"\b(crash\w*|bod(y|ies)|corpses?|war|wars|troops?|military|missiles?|bomb\w*|explosi\w*|"
+    r"blasts?|sabotag\w*|hostages?|refugees?|earthquakes?|floods?|flooding|wildfires?|"
+    r"hurricanes?|typhoons?|airstrikes?|invasion|hezbollah|hamas|gaza|famine|starv\w*|"
+    r"massacre\w*|genocide)\b", re.I)
 
 
 STOP = {"says", "said", "after", "over", "with", "from", "that", "this", "will", "into",
@@ -39,6 +49,34 @@ def same_story(a: str, b: str, required: str | None = None) -> bool:
     def content(t):
         return {w for w in pool.words(t) if len(w) >= 4 and w not in STOP and w != required}
     return len(content(a) & content(b)) >= 2
+
+
+def _name_pairs(t: str, required: str | None) -> set[tuple[str, str]]:
+    toks = [re.sub(r"'s$", "", w.lower()) if w[0].isupper() else None
+            for w in re.findall(r"[A-Za-z][\w']*", t)]
+    skip = {required, "donald"}
+    return {(a, b) for a, b in zip(toks, toks[1:]) if a and b and not {a, b} & skip}
+
+
+def echoes(t: str, recent: list[str], required: str | None = None) -> bool:
+    """The same story as one picked in the last week: a shared two-word name ("Kid Rock")
+    or the same-story test. Two Kid Rock rounds in three days, 12-14/10/2026."""
+    mine = _name_pairs(t, required)
+    return any(mine & _name_pairs(r, required) or same_story(t, r, required) for r in recent)
+
+
+def remember(mem: dict, date: str, rounds: list[dict]) -> dict:
+    """The week's real headlines, today's replacing any earlier build of today."""
+    start = (datetime.date.fromisoformat(date) - datetime.timedelta(days=MEMORY_DAYS)).isoformat()
+    recent = {d: t for d, t in (mem.get("recent") or {}).items() if start <= d < date}
+    recent[date] = [h["text"] for r in rounds for i, h in enumerate(r.get("headlines", []))
+                    if i != r.get("fake")]
+    return {**mem, "recent": recent}
+
+
+def recent_texts(mem: dict, date: str) -> list[str]:
+    start = (datetime.date.fromisoformat(date) - datetime.timedelta(days=MEMORY_DAYS)).isoformat()
+    return [t for d, ts in sorted((mem.get("recent") or {}).items()) if start <= d < date for t in ts]
 
 
 CONNECTORS = (" amid ", " as ", " ahead of ", " after ", " in bid to ", " despite ")
@@ -97,15 +135,43 @@ def _pick(p, gen, required=None, n=prompts.PICK_ROUNDS):
     return best
 
 
+def _judged(rounds, fakes, done, gen, seed) -> list[int]:
+    """Rounds where a model, shown the four as a player sees them, picks the fake."""
+    shown, where = [], []
+    for t in done:
+        heads = [x["text"] for x in rounds[t]]
+        pos = random.Random(f"{seed}:judge:{t}").randrange(4)
+        heads.insert(pos, fakes[t])
+        shown.append(heads)
+        where.append(pos)
+    try:
+        raw, _prov = gen(prompts.judge_prompt(shown))
+        guesses = prompts.parse_judge(raw, len(done))
+    except (ValueError, llm.NoProvider) as exc:
+        print(f"{seed}: judge skipped: {exc}")
+        return []
+    caught = [t for t, g, w in zip(done, guesses, where) if g == w]
+    for t in caught:
+        print(f"{seed} round {t + 1} spotted by the judge: {fakes[t]}")
+    return caught
+
+
 def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
               required: str | None = None, others_pool: list[dict] | None = None,
-              count: int = prompts.ROUNDS) -> list[dict] | None:
+              count: int = prompts.ROUNDS, recent: list[str] | None = None,
+              hard: list[str] | None = None) -> list[dict] | None:
     picks = count + 1                      # one spare round
     min_pool = picks * prompts.PER
     # A real carrying a barred word could never be the fake, so it would be a free
     # elimination. It stays in the day's vocabulary; it just cannot be picked.
     day = day if day is not None else [x["text"] for x in p]
     p = [x for x in p if not gates.ALLEGATION.search(x["text"])]
+    if required is None:
+        p = [x for x in p if not DARK.search(x["text"])]
+    if recent:
+        fresh = [x for x in p if not echoes(x["text"], recent, required)]
+        # A thin day keeps a repeat rather than losing its puzzle.
+        p = fresh if len(fresh) >= 2 * min_pool else p
     if len(p) < min_pool:
         return None
     if len(p) > CHUNK:
@@ -153,7 +219,7 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
         # Only the rounds still failing go back, each with the reasons it failed.
         raw, _prov = gen(prompts.fake_prompt([rounds[t] for t in todo],
                                              {k: notes[t] for k, t in enumerate(todo) if t in notes},
-                                             others, required, seed))
+                                             others, required, seed, hard))
         try:
             got = prompts.parse_fakes(raw, len(todo))
         except ValueError:
@@ -182,6 +248,27 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
     done = sorted(fakes)[:count]
     if len(done) < count:
         return None
+    # Players said they would soon spot a pattern; a model that can is the test.
+    for _ in range(JUDGE_TRIES):
+        caught = _judged(rounds, fakes, done, gen, seed)
+        if not caught:
+            break
+        note = ["a reader spotted it as the invented one: make it as specific and "
+                "matter-of-fact as the real ones"]
+        try:
+            raw, _prov = gen(prompts.fake_prompt([rounds[t] for t in caught],
+                                                 {k: note for k in range(len(caught))},
+                                                 others, required, seed, hard))
+            got = prompts.parse_fakes(raw, len(caught))
+        except (ValueError, llm.NoProvider):
+            continue
+        for t, f in zip(caught, got):
+            if gates.check_fake(f, [x["text"] for x in rounds[t]], day, required):
+                continue
+            trial = {**fakes, t: match_case(pool.clean_title(f), [x["text"] for x in rounds[t]])}
+            # A replacement that clashes with another fake keeps the spotted one.
+            if not structure_clash([trial[x] for x in done], required):
+                fakes = trial
     out = []
     for n, t in enumerate(done):
         pos = random.Random(f"{seed}:{n}").randrange(4)
@@ -191,7 +278,8 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
     return out
 
 
-def build(date: str, history: dict, gen) -> dict:
+def build(date: str, history: dict, gen, recent: list[str] | None = None,
+          hard: list[str] | None = None) -> dict:
     """The general rounds (five, so there is a full game without Trump) and one Trump round."""
     modes = tuple(MODES)
     arts = history["articles"]
@@ -214,7 +302,8 @@ def build(date: str, history: dict, gen) -> dict:
             result[name] = make_mode(src, tracked,
                                      f"{date}:{name}", day=day, required=MODES[name],
                                      others_pool=everyone if MODES[name] else None,
-                                     count=TRUMP_ROUNDS if MODES[name] else prompts.ROUNDS)
+                                     count=TRUMP_ROUNDS if MODES[name] else prompts.ROUNDS,
+                                     recent=recent, hard=hard)
         except llm.NoProvider as exc:
             # A spent quota in one mode must not cost the other its puzzle.
             print(f"{date} {name}: no provider: {exc}")
@@ -233,9 +322,15 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     out = Path(a.out)
     have = json.loads(out.read_text(encoding="utf-8")) if out.exists() else {}
+    # Not committed, like the puzzle: the workflow fetches it from the live site.
+    mem_path = out.with_name("memory.json")
+    mem = json.loads(mem_path.read_text(encoding="utf-8")) if mem_path.exists() else {}
     # A published puzzle is never changed under someone mid-game, unless forced.
     if have.get("date") == a.date and have.get("rounds") and not a.force:
         print(f"{a.date} already built")
+        if a.date not in mem.get("recent", {}):
+            mem_path.write_text(json.dumps(remember(mem, a.date, have["rounds"]), ensure_ascii=False),
+                                encoding="utf-8")
         return 0
     history = pool.load_history(a.date, a.local)
     if history is None:
@@ -243,7 +338,9 @@ def main(argv=None) -> int:
         return 0
     if not a.local:
         history["articles"] = history["articles"] + pool.load_oddities()
-    new = build(a.date, history, lambda prompt: llm.generate(prompt))
+    new = build(a.date, history, lambda prompt: llm.generate(prompt),
+                recent=recent_texts(mem, a.date),
+                hard=[h["text"] for h in mem.get("hard", [])][:HARD_SHOWN])
     if not new.get("normal"):
         print(f"{a.date}: general rounds failed, nothing written")
         return 1
@@ -255,6 +352,7 @@ def main(argv=None) -> int:
     result = {"date": a.date, "id": built, "rounds": rounds, "trump_round": bool(new.get("trump")),
               "providers": new.get("providers", {})}
     out.write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
+    mem_path.write_text(json.dumps(remember(mem, a.date, rounds), ensure_ascii=False), encoding="utf-8")
     print(f"{a.date}: {len(rounds)} rounds, Trump round {'yes' if result['trump_round'] else 'no'}")
     return 0
 

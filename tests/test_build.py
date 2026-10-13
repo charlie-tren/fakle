@@ -14,6 +14,8 @@ def stub(fakes_by_call):
     calls = {"fake": 0}
 
     def gen(prompt):
+        if "written by AI" in prompt:
+            return "{}", "stub"
         if "most absurd" in prompt:
             k = int(re.search(r"Group them into (\d+) rounds", prompt).group(1))
             return json.dumps({"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17]][:k]}), "stub"
@@ -31,7 +33,7 @@ BASE = "officials say the new plan will be reviewed again later with more talks 
 
 def rounds_of(p):
     """The rounds make_mode will form from the stub's first 15 picks."""
-    c = [x for x in p if not build.gates.ALLEGATION.search(x["text"])]
+    c = [x for x in p if not build.gates.ALLEGATION.search(x["text"]) and not build.DARK.search(x["text"])]
     return [c[i:i + 3] for i in range(0, 18, 3)]
 
 
@@ -120,8 +122,9 @@ def test_fake_prompt_carries_unpicked_headlines():
         seen.append(prompt)
         return base(prompt)
     build.make_mode(p, gen, "s")
-    fake_prompts = [x for x in seen if "most absurd" not in x]
-    first_unpicked = [x for x in p if not build.gates.ALLEGATION.search(x["text"])][18]
+    fake_prompts = [x for x in seen if "most absurd" not in x and "written by AI" not in x]
+    first_unpicked = [x for x in p if not build.gates.ALLEGATION.search(x["text"])
+                      and not build.DARK.search(x["text"])][18]
     assert fake_prompts and all(first_unpicked["text"] in x for x in fake_prompts)
 
 
@@ -265,7 +268,7 @@ def test_force_rebuilds_both_modes(tmp_path, monkeypatch):
     (tmp_path / "2026-10-11.json").write_text(json.dumps(FIX), encoding="utf-8")
     out = tmp_path / "puzzle.json"
     out.write_text(json.dumps({"date": "2026-10-11", "rounds": [{"x": 1}] * 5}))
-    monkeypatch.setattr(build, "build", lambda date, history, gen: {
+    monkeypatch.setattr(build, "build", lambda date, history, gen, **k: {
         "date": date, "normal": [{"n": i} for i in range(5)], "trump": [{"t": 1}], "providers": {}})
     assert build.main(["--date", "2026-10-11", "--local", str(tmp_path), "--out", str(out), "--force"]) == 0
     assert json.loads(out.read_text())["rounds"][-1] == {"t": 1}
@@ -356,7 +359,7 @@ def test_a_failed_chunk_is_skipped_not_fatal():
 def _main_with(tmp_path, monkeypatch, normal, trump):
     (tmp_path / "2026-10-11.json").write_text(json.dumps(FIX), encoding="utf-8")
     out = tmp_path / "puzzle.json"
-    monkeypatch.setattr(build, "build", lambda date, history, gen: {
+    monkeypatch.setattr(build, "build", lambda date, history, gen, **k: {
         "date": date, "normal": normal, "trump": trump, "providers": {"normal": "a", "trump": "b"}})
     code = build.main(["--date", "2026-10-11", "--local", str(tmp_path), "--out", str(out)])
     return code, (json.loads(out.read_text()) if out.exists() else None)
@@ -454,9 +457,69 @@ def test_oddities_join_the_day_on_a_live_build(tmp_path, monkeypatch):
     monkeypatch.setattr(build.pool, "load_history", lambda date, local=None: {"articles": [{"title": "a"}]})
     monkeypatch.setattr(build.pool, "load_oddities", lambda: [{"title": "b"}])
 
-    def fake(date, history, gen):
+    def fake(date, history, gen, **k):
         seen["arts"] = history["articles"]
         return {"date": date, "normal": [{"n": i} for i in range(5)], "trump": None, "providers": {}}
     monkeypatch.setattr(build, "build", fake)
     assert build.main(["--date", "2026-10-11", "--out", str(tmp_path / "p.json")]) == 0
     assert seen["arts"] == [{"title": "a"}, {"title": "b"}]
+
+
+
+def test_dark_stories_never_reach_the_general_rounds():
+    assert build.DARK.search("Traditional ruler cries out as decaying bodies pollute water")
+    assert build.DARK.search("Military plane crash in the north")
+    assert not build.DARK.search("Japanese brewer designs wobbly beer glass")
+
+
+def test_a_story_from_the_last_week_is_not_picked_again():
+    recent = ["Kid Rock Announces Christian Album Tour"]
+    assert build.echoes("Kid Rock's New Christian Album Includes An Unlikely Cameo", recent)
+    assert build.echoes("Alberta woman breaks plank record again", ["Alberta woman, 61, breaks plank record"])
+    assert not build.echoes("Japanese brewer designs wobbly beer glass", recent)
+    # The required word alone joins nothing: every Trump headline carries it.
+    assert not build.echoes("Donald Trump mocks a rooftop", ["Donald Trump weighs a livestream"], "trump")
+
+
+def test_memory_keeps_a_week_of_reals_and_drops_today_on_a_rebuild():
+    mem = {"recent": {"2026-10-01": ["old"], "2026-10-09": ["kept"], "2026-10-11": ["stale today"]}}
+    rounds = [{"headlines": [{"text": "r1"}, {"text": "f"}, {"text": "r2"}], "fake": 1}]
+    got = build.remember(mem, "2026-10-11", rounds)
+    assert got["recent"] == {"2026-10-09": ["kept"], "2026-10-11": ["r1", "r2"]}
+    assert build.recent_texts(got, "2026-10-11") == ["kept"]
+
+
+def test_the_judge_sends_back_a_fake_it_spots(monkeypatch):
+    p = pool.build_pool(FIX["articles"])
+    rounds_pool = rounds_of(p)
+    first = good_fakes(rounds_pool)
+    second = [f.replace("w0", "x0") for f in first]
+    seen = {"judge": 0}
+    base, calls = stub([first, second])
+
+    def gen(prompt):
+        if "written by AI" in prompt:
+            seen["judge"] += 1
+            guesses = []
+            for n, block in enumerate(re.split(r"^Round \d+:\n", prompt, flags=re.M)[1:]):
+                lines = [l for l in block.splitlines() if re.match(r"^[1-4]\. ", l)][:4]
+                fake = next(i for i, l in enumerate(lines) if re.search(r"\b[wx]\d\b", l.lower()))
+                # Spots round 1 the first time; wrong everywhere else.
+                right = seen["judge"] == 1 and n == 0
+                guesses.append(fake + 1 if right else (fake + 1) % 4 + 1)
+            return json.dumps({"guesses": guesses}), "stub"
+        return base(prompt)
+    out = build.make_mode(p, gen, "s")
+    texts = [h["text"] for r in out for h in r["headlines"]]
+    assert seen["judge"] >= 1 and calls["fake"] == 2
+    assert any("x0" in t.lower() for t in texts)
+
+
+
+def test_an_already_built_day_still_lands_in_memory(tmp_path):
+    out = tmp_path / "puzzle.json"
+    out.write_text(json.dumps({"date": "2026-10-11", "rounds": [
+        {"headlines": [{"text": "Kid Rock tours"}, {"text": "fake"}], "fake": 1}]}))
+    assert build.main(["--date", "2026-10-11", "--local", str(tmp_path), "--out", str(out)]) == 0
+    mem = json.loads((tmp_path / "memory.json").read_text())
+    assert mem["recent"] == {"2026-10-11": ["Kid Rock tours"]}

@@ -12,28 +12,40 @@ how strange the world is. Players see four headlines, three real and one invente
 try to spot the invented one.
 
 From the numbered real headlines below, choose the {n} most absurd, the ones a reader
-would least believe are real. The bar is "Candidate named Hitler Mussolini elected mayor
-in Peru": true, and barely believable. {focus}
-
+would least believe are real, and the funniest. The bar is
+"Candidate named Hitler Mussolini elected mayor in Peru": true, and barely believable.
+{focus}
+{examples}
 Leave out anything boring: ordinary politics, markets, sport results, routine business,
 diplomacy and policy announcements, however important. Leave out deaths, disasters and
 violence. If a headline would not make someone say "wait, really?", it does not belong.
 
 Group them into {rounds} rounds of {per}. Use each headline at most once. Each round's
-headlines are about three different stories.
+headlines are about three different stories. Where you can, the three in a round share a
+broad area (animals, food, science and tech, small towns, odd rules, records and
+hobbies...) and each round is a different area from the others. Strangeness comes first:
+never leave out a stranger headline to make a group fit; a looser group is fine.
 
 Reply with JSON only: {{"rounds": [[i, j, k], ...]}}
 
 {lines}"""
+
+EXAMPLES = """
+Right: "Japanese brewer designs 'wobbly' beer glass to encourage responsible drinking",
+"Russian taxi drivers told to use Google Maps after drones hit Yandex", "Every game could be
+the last one for Don Manuel, the 105-year-old chess player".
+Wrong, however important: "Hezbollah outlines financial aid plan for Lebanese with
+destroyed homes", "Poland blames Starlink sabotage on Russia".
+"""
 
 TRUMP_FOCUS = ("Every headline here involves Trump: pick the craziest things Trump said, "
                "did or was caught up in today, not the routine politics.")
 
 # One shape per round, so the five fakes do not share a structure (Charlie, 11/10/2026:
 # "all the fake ones have the same kind of structure - easy to guess after a while").
+# No quote shape: an unnamed speaker made the vaguest headline in its round (14/10/2026).
 SHAPES = [
     "short and punchy, with no trailing clause",
-    "built around a quote in quotation marks from an unnamed speaker (officials, a spokesperson, residents)",
     "opens with a number or a statistic",
     "a town, council, school or business doing something strange",
     "an official ban, ruling or rule that sounds absurd",
@@ -52,8 +64,8 @@ to combat afternoon heat".
 Rules:
 - Never end with an "amid ...", "as ...", "ahead of ..." or "after ..." clause. That
   crutch is how earlier fakes gave themselves away.
-- Each fake is on a different topic from all three in its round, not a spin-off of one.
-  Wrong: beside "Alberta woman, 61, breaks her own world record by planking for 5 hours",
+- Each fake is in the same broad area as its round but a different story from all
+  three, not a spin-off of one. Wrong: beside "Alberta woman, 61, breaks her own world record by planking for 5 hours",
   writing "Canadian health board bans plank competitions longer than three hours".
 - Each fake reports a different event from all three in its round. Never combine,
   rephrase or borrow phrases from them: a fake stitched from its neighbours is the
@@ -65,6 +77,9 @@ Rules:
 - Same length, register, punctuation and capitalisation style as its three.
 - Same spelling convention as its three (American if they are American).
 - Plausible, a little strange, never a joke.
+- As specific as the real ones: a named place, organisation or person from the lists
+  below, and a concrete detail (a number, an age, an object). Vague fakes ("local council
+  chief", "three pilots", "officials") are the first ones players spot.
 - Only name people, places and organisations that appear somewhere in the real
   headlines below, including the list of other real headlines from today.
 - Never claim anyone committed a crime, did anything sexual, is ill or died.
@@ -75,7 +90,7 @@ Rules:
 - Never put invented words in a named person's mouth: a quote comes from an unnamed
   speaker, never from a real person by name.
 
-Reply with JSON only: {{"fakes": ["...", ...]}} with one string per round, in order.
+{hard}Reply with JSON only: {{"fakes": ["...", ...]}} with one string per round, in order.
 
 {rounds}
 
@@ -86,7 +101,9 @@ Other real headlines from today (for names only, not phrasing):
 def pick_prompt(pool: list[dict], required: str | None = None, rounds: int = PICK_ROUNDS) -> str:
     lines = "\n".join(f"{i}. {x['text']}" for i, x in enumerate(pool))
     focus = TRUMP_FOCUS if required == "trump" else ""
-    return PICK.format(n=rounds * PER, rounds=rounds, per=PER, lines=lines, focus=focus)
+    examples = "" if required else EXAMPLES
+    return PICK.format(n=rounds * PER, rounds=rounds, per=PER, lines=lines, focus=focus,
+                       examples=examples)
 
 
 SHORTLIST = """You are helping pick headlines for Fakle, a daily game whose whole point is to
@@ -136,7 +153,7 @@ def parse_pick(raw, pool_len: int, rounds: int = PICK_ROUNDS) -> list[list[int]]
 
 def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = None,
                 others: list[dict] | None = None, required: str | None = None,
-                seed: str = "") -> str:
+                seed: str = "", hard: list[str] | None = None) -> str:
     blocks = []
     start = sum(map(ord, seed)) % len(SHAPES)
     for n, r in enumerate(rounds):
@@ -153,7 +170,10 @@ def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = N
                  f"\nLength: between {lo} and {hi} words.")
         blocks.append(f"Round {n + 1}:\n{lines}{shape}{extra}")
     other = "\n".join(f"- {x['text']}" for x in (others or [])) or "(none)"
-    text = FAKE.format(rounds="\n\n".join(blocks), others=other)
+    # Earlier fakes that most players took for real: the register to aim for.
+    fooled = "".join(f"- {h}\n" for h in (hard or []))
+    fooled = f"Earlier fakes that fooled most players:\n{fooled}\n" if fooled else ""
+    text = FAKE.format(rounds="\n\n".join(blocks), others=other, hard=fooled)
     if required:
         # Every real in the round carries it, so a fake without it is the answer.
         text = text.replace("Rules:\n", f"Rules:\n- Every fake must mention {required.title()}, "
@@ -167,3 +187,26 @@ def parse_fakes(raw, n: int) -> list[str]:
     if not isinstance(fakes, list) or len(fakes) != n or not all(isinstance(f, str) and f.strip() for f in fakes):
         raise ValueError(f"expected {n} fakes")
     return [f.strip() for f in fakes]
+
+
+JUDGE = """Each round below has four headlines. Three are real headlines from today's news
+and one was written by AI. For each round, say which one was written by AI.
+
+Reply with JSON only: {{"guesses": [n, ...]}}, one number from 1 to 4 per round, in order.
+
+{rounds}"""
+
+
+def judge_prompt(rounds: list[list[str]]) -> str:
+    blocks = ["Round {}:\n{}".format(n + 1, "\n".join(f"{i + 1}. {t}" for i, t in enumerate(r)))
+              for n, r in enumerate(rounds)]
+    return JUDGE.format(rounds="\n\n".join(blocks))
+
+
+def parse_judge(raw, n: int) -> list[int]:
+    """The judge's guesses as 0-based positions."""
+    d = llm.extract_json(raw)
+    g = d.get("guesses") if isinstance(d, dict) else None
+    if not isinstance(g, list) or len(g) != n or not all(isinstance(x, int) and 1 <= x <= 4 for x in g):
+        raise ValueError(f"expected {n} guesses")
+    return [x - 1 for x in g]
