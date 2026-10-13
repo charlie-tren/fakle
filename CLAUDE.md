@@ -40,7 +40,10 @@ The point is to show how insane the world is. Every rule below serves that.
 - **A fake must not be guessable by its style.** Players said they would soon spot a
   pattern. The tell on 14/10 was vagueness: "local council chief", "three pilots". So no
   quote shape, a `vague` gate (no name and no number fails), and a judge model that sees
-  each round as a player does; a fake it spots is rewritten, up to twice.
+  each round as a player does; a fake it spots is rewritten, up to twice, with its reason.
+  **Anything asked of every fake becomes the new pattern**: "add a concrete detail" put a
+  number in all five on the 13/10 trial, so a fake may carry a number only if its round does.
+  Before adding a rule for all fakes, check the reals share that trait.
 - **Players teach the writer.** Finished games post their picks anonymously to the
   `fakle-stats` Worker (`worker/`, D1). The end screen shows "Better than N% of today's
   players" and the review shows how many spotted each fake. Each build scores yesterday's
