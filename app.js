@@ -126,7 +126,7 @@
       Number(d[2]) + "/" + Number(d[1]) + " " + s + "/" + rounds.length + "\n" + dots;
     var st = recordStats();
     paintLetters();
-    $("streak").textContent = st ? "Streak " + st.streak + " \u00b7 best " + st.best : "";
+    $("streak").textContent = st ? "Streak " + st.streak + " \u00b7 Best " + st.best : "";
     countdown();
     crowd(s);
   }
