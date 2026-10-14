@@ -34,6 +34,7 @@ for d in sys.argv[1:] or DATES:
     for mode in ("normal", "trump"):
         print(f"\n== {d} {mode} ==")
         for r in p[mode] or []:
+            print(f"  [{r.get('area', '')}]")
             for j, x in enumerate(r["headlines"]):
                 print(("  FAKE " if j == r["fake"] else "       ") + x["text"])
             print()
