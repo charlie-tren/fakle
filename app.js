@@ -51,7 +51,11 @@
       li.classList.add("is-fake");
       var tag = document.createElement("span");
       tag.className = "tag";
-      tag.textContent = "Fake";
+      // After the game, how many of today's players saw through it.
+      var c = state.crowd, i = rounds.indexOf(r);
+      tag.textContent = state.done && c && c.players >= 3 && c.rounds[i]
+        ? "Fake \u00b7 " + Math.round(100 * c.rounds[i][r.fake] / c.players) + "% spotted it"
+        : "Fake";
       li.appendChild(tag);
     } else {
       var a = document.createElement("a");
@@ -70,11 +74,7 @@
     var label = state.trumpRound && i === rounds.length - 1 ? "Trump round" : r.area || "";
     $("round-label").textContent = label;
     $("round-label").hidden = !label;
-    var c = state.crowd;
-    var tail = state.done && c && c.players >= 3 && c.rounds[i]
-      ? Math.round(100 * c.rounds[i][r.fake] / c.players) + "% spotted it"
-      : score() + " right";
-    $("progress").textContent = "Round " + (i + 1) + " of " + rounds.length + " \u00b7 " + tail;
+    $("progress").textContent = "Round " + (i + 1) + " of " + rounds.length + " \u00b7 " + score() + " right";
     var ol = $("round");
     ol.innerHTML = "";
     r.headlines.forEach(function (h, j) { ol.appendChild(row(h, j, r, picked)); });

@@ -394,8 +394,10 @@ def test_review_says_how_many_spotted_each_fake(site, browser):
     play_all(pg)
     pg.wait_for_function("document.getElementById('crowd').textContent.length > 0")
     pg.locator("#review").click()
-    # Round 1's fake is at position 1, which 4 of 11 picked.
-    assert pg.locator("#progress").text_content().endswith("36% spotted it")
+    # Round 1's fake is at position 1, which 4 of 11 picked. On the card, not in a
+    # screen-reader-only line where it first went.
+    tag = pg.locator(".is-fake .tag")
+    assert tag.is_visible() and tag.text_content() == "Fake \u00b7 36% spotted it"
 
 
 def test_automation_never_posts_a_result(site, browser):
