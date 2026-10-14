@@ -442,3 +442,11 @@ def test_a_round_shows_its_area_and_the_last_its_trump_label(site, browser):
         pg.locator(".headline").first.click()
         pg.locator("#next").click()
     assert pg.locator("#round-label").text_content() == "Trump round"
+
+
+
+def test_every_segment_after_a_middle_dot_is_capitalised():
+    # Charlie, 14/10/2026: "why is best on the final page lower case" ("Streak 1 · best 1").
+    import re
+    src = (ROOT / "app.js").read_text(encoding="utf-8")
+    assert not re.findall(r"\\u00b7 [a-z]", src)
