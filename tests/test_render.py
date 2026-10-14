@@ -420,3 +420,23 @@ def test_a_person_posts_their_result_once(site, browser):
     pg.wait_for_selector("#end:not([hidden])")
     pg.wait_for_function("document.getElementById('crowd').textContent.length > 0")
     assert len(POSTS) == 1 and json.loads(POSTS[0])["picks"] == [0, 0, 0, 0, 0]
+
+
+
+def test_a_round_shows_its_area_and_the_last_its_trump_label(site, browser):
+    data = json.loads((ROOT / "tests/fixtures/puzzle.json").read_text(encoding="utf-8"))
+    data["rounds"][0]["area"] = "Animals"
+    data["trump_round"] = True
+    ctx = context(browser, viewport={"width": 1280, "height": 900})
+    ctx.route("**/puzzle.json", lambda r: r.fulfill(json=data))
+    pg = ctx.new_page()
+    pg.goto(site)
+    enter(pg)
+    assert pg.locator("#round-label").is_visible() and pg.locator("#round-label").text_content() == "Animals"
+    pg.locator(".headline").first.click()
+    pg.locator("#next").click()
+    assert not pg.locator("#round-label").is_visible()
+    for _ in range(3):
+        pg.locator(".headline").first.click()
+        pg.locator("#next").click()
+    assert pg.locator("#round-label").text_content() == "Trump round"

@@ -152,6 +152,7 @@ def structure_clash(fakes: list[str], required: str | None = None) -> set[int]:
 
 
 def _pick(p, gen, required=None, n=prompts.PICK_ROUNDS):
+    """The picked rounds, as indices, and each round's area."""
     best = None
     for _ in range(3):
         raw, _prov = gen(prompts.pick_prompt(p, required, n))
@@ -159,10 +160,10 @@ def _pick(p, gen, required=None, n=prompts.PICK_ROUNDS):
             rounds = prompts.parse_pick(raw, len(p), n)
         except ValueError:
             continue
-        best = rounds
+        best = rounds, prompts.parse_areas(raw, n)
         if not any(same_story(p[a]["text"], p[b]["text"], required)
                    for r in rounds for i, a in enumerate(r) for b in r[i + 1:]):
-            return rounds
+            return best
     # A same-story round is a weaker puzzle, not a broken one: better than no puzzle.
     return best
 
@@ -230,10 +231,11 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
         if len(p) < min_pool:
             print(f"{seed}: shortlist too short ({len(p)})")
             return None
-    idx = _pick(p, gen, required, picks)
-    if idx is None:
+    picked_ = _pick(p, gen, required, picks)
+    if picked_ is None:
         print(f"{seed}: no valid pick")
         return None
+    idx, areas = picked_
     rounds = [[p[i] for i in r] for r in idx]
     picked = {i for r in idx for i in r}
     if others_pool is None:
@@ -308,7 +310,8 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
         pos = random.Random(f"{seed}:{n}").randrange(4)
         heads = [dict(x) for x in rounds[t]]
         heads.insert(pos, {"text": fakes[t], "source": "", "url": ""})
-        out.append({"headlines": heads, "fake": pos})
+        # Trump's round is labelled by the page; a general round by the area it was grouped on.
+        out.append({"headlines": heads, "fake": pos, "area": "" if required else areas[t]})
     return out
 
 

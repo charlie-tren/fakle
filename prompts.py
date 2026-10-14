@@ -25,8 +25,10 @@ headlines are about three different stories. Where you can, the three in a round
 broad area (animals, food, science and tech, small towns, odd rules, records and
 hobbies...) and each round is a different area from the others. Strangeness comes first:
 never leave out a stranger headline to make a group fit; a looser group is fine.
+Name each round's area in one to three words ("Animals", "Food and drink", "Small
+towns"); if a round has no common thread, its name is "".
 
-Reply with JSON only: {{"rounds": [[i, j, k], ...]}}
+Reply with JSON only: {{"rounds": [[i, j, k], ...], "areas": ["...", ...]}}
 
 {lines}"""
 
@@ -42,17 +44,9 @@ on Supreme Court as protests gain ground".
 TRUMP_FOCUS = ("Every headline here involves Trump: pick the craziest things Trump said, "
                "did or was caught up in today, not the routine politics.")
 
-# One shape per round, so the five fakes do not share a structure (Charlie, 11/10/2026:
-# "all the fake ones have the same kind of structure - easy to guess after a while").
-# No quote shape: an unnamed speaker made the vaguest headline in its round (14/10/2026).
-SHAPES = [
-    "short and punchy, with no trailing clause",
-    "opens with a number or a statistic",
-    "a town, council, school or business doing something strange",
-    "an official ban, ruling or rule that sounds absurd",
-    "an animal, an object or a food at the centre of the story",
-    "a person with an unusual record, job or habit",
-]
+# Each fake copies the form of one real in its round (Charlie, 14/10/2026: "can the style
+# of the fakes vary as well?"). Fixed shapes were a house style of their own, and the quote
+# shape made the vaguest headline in its round.
 
 FAKE = """You are writing the invented headline for each round of a daily game.
 Each round has three real headlines. Write ONE new headline per round that a
@@ -138,6 +132,17 @@ def parse_shortlist(raw, n: int) -> list[int]:
     return out
 
 
+def parse_areas(raw, n: int) -> list[str]:
+    """Each round's area, or "" where the picker gave none or the reply is unusable."""
+    try:
+        a = llm.extract_json(raw).get("areas")
+    except (ValueError, AttributeError):
+        return [""] * n
+    if not isinstance(a, list) or len(a) != n:
+        return [""] * n
+    return [x.strip()[:24] if isinstance(x, str) and len(x.split()) <= 3 else "" for x in a]
+
+
 def parse_pick(raw, pool_len: int, rounds: int = PICK_ROUNDS) -> list[list[int]]:
     want = rounds
     d = llm.extract_json(raw)
@@ -156,7 +161,7 @@ def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = N
                 others: list[dict] | None = None, required: str | None = None,
                 seed: str = "", hard: list[str] | None = None) -> str:
     blocks = []
-    start = sum(map(ord, seed)) % len(SHAPES)
+    start = sum(map(ord, seed)) % 3
     for n, r in enumerate(rounds):
         # No source labels: the model copies them into its fake.
         lines = "\n".join(f"- {x['text']}" for x in r)
@@ -167,7 +172,9 @@ def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = N
         # pad its fakes with a stray last word to hit it.
         mean = sum(len(x["text"].split()) for x in r) / len(r)
         lo, hi = round(mean * 0.7 + 0.49), int(mean * 1.3)
-        shape = (f"\nShape for this round: {SHAPES[(start + n) % len(SHAPES)]}."
+        model = r[(start + n) % len(r)]["text"]
+        shape = (f"\nForm: write it in the form of \"{model}\": the same kind of opening, "
+                 "punctuation and register, a different story."
                  f"\nLength: between {lo} and {hi} words.")
         blocks.append(f"Round {n + 1}:\n{lines}{shape}{extra}")
     other = "\n".join(f"- {x['text']}" for x in (others or [])) or "(none)"

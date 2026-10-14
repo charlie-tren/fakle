@@ -31,8 +31,11 @@ The point is to show how insane the world is. Every rule below serves that.
   players. Prompt rule.
 - **No invented quotes from named people.** Quotes come from unnamed speakers only.
 - **Rounds are grouped by broad area, but strangeness comes first** (14/10/2026). He asked
-  whether fixed topic labels would block good stories; they would, so there is no label
-  and no fixed list. The picker groups where it can and never drops a stranger story to fit.
+  whether fixed topic labels would block good stories; they would, so there is no fixed
+  list. The picker groups where it can, never drops a stranger story to fit, and names
+  each group after forming it; the page shows that name above the round, or nothing.
+- **Each fake takes the form of one real in its round** (opening, punctuation, register),
+  so the five vary as the outlets do. Fixed shapes were a house style of their own.
 - **No story twice in a week.** Kid Rock turned up twice in three days. `memory.json` (served
   beside the puzzle, never committed) holds a week of real headlines; `build.echoes` drops
   a candidate sharing a two-word name or the same-story test with one.

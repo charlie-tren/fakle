@@ -67,7 +67,9 @@
     current = i;
     var r = rounds[i];
     var picked = state.picks[i];
-    $("round-label").hidden = !(state.trumpRound && i === rounds.length - 1);
+    var label = state.trumpRound && i === rounds.length - 1 ? "Trump round" : r.area || "";
+    $("round-label").textContent = label;
+    $("round-label").hidden = !label;
     var c = state.crowd;
     var tail = state.done && c && c.players >= 3 && c.rounds[i]
       ? Math.round(100 * c.rounds[i][r.fake] / c.players) + "% spotted it"

@@ -78,10 +78,13 @@ def test_trump_pick_prompt_asks_for_the_craziest():
     assert "Trump" in prompts.pick_prompt(POOL, required="trump")
 
 
-def test_fake_prompt_gives_each_round_a_different_shape():
-    p = prompts.fake_prompt([POOL[0:3], POOL[3:6], POOL[6:9]], seed="2026-10-11:normal")
-    shapes = [line for line in p.splitlines() if line.startswith("Shape for this round:")]
-    assert len(shapes) == 3 and len(set(shapes)) == 3
+def test_each_fake_takes_the_form_of_a_real_in_its_round():
+    rounds = [POOL[0:3], POOL[3:6], POOL[6:9]]
+    p = prompts.fake_prompt(rounds, seed="2026-10-11:normal")
+    forms = [line for line in p.splitlines() if line.startswith("Form: write it in the form of")]
+    assert len(forms) == 3
+    for line, r in zip(forms, rounds):
+        assert any(f'"{x["text"]}"' in line for x in r)
 
 
 def test_fake_prompt_carries_the_good_fake_example():
@@ -89,8 +92,7 @@ def test_fake_prompt_carries_the_good_fake_example():
 
 
 
-def test_no_shape_asks_for_a_short_headline():
-    assert not any("nine words" in s for s in prompts.SHAPES)
+
 
 
 
@@ -135,10 +137,7 @@ def test_pick_prompt_shows_funny_and_dull_examples():
     assert "wobbly" in p and "Starlink sabotage" in p
 
 
-def test_no_shape_is_a_quote():
-    # 14/10/2026: both quote-shaped fakes ("'We will protect our farms,' says local council
-    # chief") were the vaguest headline in their round.
-    assert not any("quot" in s for s in prompts.SHAPES)
+
 
 
 def test_fake_prompt_asks_for_specifics_in_the_round_area():
@@ -166,3 +165,11 @@ def test_fake_prompt_shows_fakes_that_fooled_players():
 def test_trump_fakes_read_like_his_coverage_not_satire():
     assert "whimsical appointment" in prompts.fake_prompt([POOL[0:3]], required="trump")
     assert "whimsical appointment" not in prompts.fake_prompt([POOL[0:3]])
+
+
+
+def test_areas_name_each_round_or_fall_back_to_none():
+    raw = json.dumps({"rounds": [[0, 1, 2], [3, 4, 5]], "areas": ["Animals", "a long name of six words"]})
+    assert prompts.parse_areas(raw, 2) == ["Animals", ""]
+    assert prompts.parse_areas(json.dumps({"rounds": [[0, 1, 2], [3, 4, 5]]}), 2) == ["", ""]
+    assert "areas" in prompts.pick_prompt(POOL)
