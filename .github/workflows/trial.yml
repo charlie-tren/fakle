@@ -1,5 +1,7 @@
 # Builds puzzles for past dates with the real models and prints them. Nothing is
-# deployed or committed. Spends free-tier calls: ~15 a date.
+# deployed or committed. Spends ~15 free-tier calls a date from the SAME quota as the
+# daily build; three trials emptied it on 14/10. It resets at midnight Pacific
+# (17:00-18:00 Sydney), before the 05:00 build.
 name: trial
 on:
   workflow_dispatch:
