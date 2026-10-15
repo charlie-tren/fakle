@@ -338,7 +338,9 @@ def build(date: str, history: dict, gen, recent: list[str] | None = None,
                 [x for x in everyone if "trump" not in pool.words(x["text"])]
             result[name] = make_mode(src, tracked,
                                      f"{date}:{name}", day=day, required=MODES[name],
-                                     others_pool=everyone if MODES[name] else None,
+                                     # Names come from the whole day, not the shortlist's
+                                     # leftovers, so a fake need not borrow from its round.
+                                     others_pool=everyone if MODES[name] else src,
                                      count=TRUMP_ROUNDS if MODES[name] else prompts.ROUNDS,
                                      recent=recent, hard=hard)
         except llm.NoProvider as exc:

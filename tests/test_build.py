@@ -41,11 +41,15 @@ def good_fakes(rounds_pool):
     # Lowercase after the first word, so no new names; common words only, so no
     # overlap; sized to its round's mean so the length gate passes. Distinct per round.
     # Each opens on a different name from the day, so it is neither vague nor counted.
+    # The name comes from another round: one shared with its own round is a twin.
     names = sorted(build.gates._mid_caps([x["text"] for r in rounds_pool for x in r]))
-    out = []
+    out, used = [], set()
     for i, r in enumerate(rounds_pool):
+        own = build.gates._proper_nouns(" ".join(x["text"] for x in r))
+        name = next(m for m in names if m not in own and m not in used)
+        used.add(name)
         n = round(sum(len(x["text"].split()) for x in r) / len(r))
-        out.append(" ".join([names[i].title()] + BASE[:n - 2] + ["zq" + "abcdef"[i]]))
+        out.append(" ".join([name.title()] + BASE[:n - 2] + ["zq" + "abcdef"[i]]))
     return out
 
 

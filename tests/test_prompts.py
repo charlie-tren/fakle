@@ -43,7 +43,7 @@ def test_parse_fakes():
 def test_fake_prompt_lists_other_headlines_as_name_source():
     p = prompts.fake_prompt([POOL[0:3]], others=[POOL[20], POOL[21]])
     assert "Headline number 20" in p and "Headline number 21" in p
-    assert "different event" in p
+    assert "never from the three in its round" in p
 
 
 def test_pick_prompt_asks_for_different_stories_per_round():
@@ -78,13 +78,16 @@ def test_trump_pick_prompt_asks_for_the_craziest():
     assert "Trump" in prompts.pick_prompt(POOL, required="trump")
 
 
-def test_each_fake_takes_the_form_of_a_real_in_its_round():
+def test_each_fake_takes_its_form_from_outside_the_game():
+    # A form copied from a real in its own round made a visible twin (15/10/2026).
     rounds = [POOL[0:3], POOL[3:6], POOL[6:9]]
-    p = prompts.fake_prompt(rounds, seed="2026-10-11:normal")
-    forms = [line for line in p.splitlines() if line.startswith("Form: write it in the form of")]
-    assert len(forms) == 3
-    for line, r in zip(forms, rounds):
-        assert any(f'"{x["text"]}"' in line for x in r)
+    others = POOL[20:30]
+    p = prompts.fake_prompt(rounds, seed="2026-10-11:normal", others=others)
+    forms = [line for line in p.splitlines() if line.startswith("Form: the shape of")]
+    assert len(forms) == 3 and len(set(forms)) == 3
+    for line in forms:
+        assert any(f'"{x["text"]}"' in line for x in others)
+        assert not any(f'"{x["text"]}"' in line for r in rounds for x in r)
 
 
 def test_fake_prompt_carries_the_good_fake_example():
@@ -110,7 +113,7 @@ def test_pick_prompt_and_parse_take_a_round_count():
 
 def test_fake_prompt_shows_the_spin_off_it_must_not_write():
     p = prompts.fake_prompt([POOL[0:3]])
-    assert "plank competitions" in p and "different story" in p
+    assert "plank competitions" in p and "Brooklyn bakery" in p and "shares NOTHING" in p
 
 
 def test_no_invented_quote_from_a_named_person():

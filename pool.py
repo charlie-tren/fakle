@@ -25,16 +25,19 @@ JUNK = re.compile(r"(scores|live updates|live blog|newsletter|podcast|watch:|vid
 NOT_HEADLINE = re.compile(
     r"^((how|why|what|who|where|when|did|does|do|is|are|can|could|will|would|should|"
     r"here's|inside|opinion|analysis|explainer|editorial|letters?|from the archive|"
-    r"the conversation)\b|(?-i:[A-Z][A-Z ]{3,}:))", re.I)
+    r"the conversation|you|your|top \d+)\b|(?-i:[A-Z][A-Z ]{3,}:))", re.I)
 DUPE = 0.6
 # One Story's outlets are hard news; the strangest stories of a day are thin in them
-# (probed 11/10/2026). Tabloid weird sections (Mirror, Daily Star) were lifestyle filler.
+# (probed 11/10/2026). Tabloid weird sections (Mirror, Daily Star) were lifestyle filler;
+# Metro's and Sky's went quiet for a week (15/10/2026), leaving 2 strange headlines in 883.
 ODDITIES = {
     "UPI": "https://rss.upi.com/news/odd_news.rss",
     "New York Post": "https://nypost.com/weird-but-true/feed/",
-    "Metro": "https://metro.co.uk/news/weird/feed/",
-    "Sky News": "https://feeds.skynews.com/feeds/rss/strange.xml",
 }
+# Every outlet's strange stories, found by the words they are written up with. Noisy
+# (sport and reviews come too); the shortlist step is what reads them.
+SEARCH = "https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US:en&q={q}%20when:1d"
+SEARCHES = ["bizarre", "%22world%20record%22", "unusual", "weird", "strange"]
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                     "(KHTML, like Gecko) Chrome/130.0 Safari/537.36"}
 
@@ -54,7 +57,9 @@ def load_history(date: str, local_dir: str | None = None) -> dict | None:
     return r.json()
 
 
-def parse_feed(body: bytes, source: str, now: dt.datetime) -> list[dict]:
+def parse_feed(body: bytes, source: str | None, now: dt.datetime) -> list[dict]:
+    """A feed's last 24 hours. With no source given, each item names its own outlet
+    (Google News) and only English titles are kept: a search also returns Korean ones."""
     out = []
     for it in ET.fromstring(body).iter("item"):
         title = (it.findtext("title") or "").strip()
@@ -64,21 +69,25 @@ def parse_feed(body: bytes, source: str, now: dt.datetime) -> list[dict]:
             continue
         if (now - when).total_seconds() > 86400 or title.lower().startswith("watch:"):
             continue
-        out.append({"title": title, "source": source, "url": (it.findtext("link") or "").strip()})
+        if source is None and not clean_title(title).isascii():
+            continue
+        out.append({"title": title, "source": source or (it.findtext("source") or "").strip(),
+                    "url": (it.findtext("link") or "").strip()})
     return out
 
 
 def load_oddities() -> list[dict]:
     now = dt.datetime.now(dt.timezone.utc)
+    feeds = list(ODDITIES.items()) + [(None, SEARCH.format(q=q)) for q in SEARCHES]
     out = []
-    for source, url in ODDITIES.items():
+    for source, url in feeds:
         # A dead feed costs its headlines, never the puzzle.
         try:
             r = requests.get(url, headers=UA, timeout=30)
             r.raise_for_status()
             out += parse_feed(r.content, source, now)
         except Exception as exc:
-            print(f"oddities: {source}: {type(exc).__name__}")
+            print(f"oddities: {source or url}: {type(exc).__name__}")
     return out
 
 

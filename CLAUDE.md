@@ -34,8 +34,13 @@ The point is to show how insane the world is. Every rule below serves that.
   whether fixed topic labels would block good stories; they would, so there is no fixed
   list. The picker groups where it can, never drops a stranger story to fit, and names
   each group after forming it; the page shows that name above the round, or nothing.
-- **Each fake takes the form of one real in its round** (opening, punctuation, register),
-  so the five vary as the outlets do. Fixed shapes were a house style of their own.
+- **A fake shares nothing with the three beside it** (15/10/2026, a player: "u could tell
+  what the ai was copying"). Each fake had copied the form of one real in its round and
+  taken names from it: "Brooklyn bakery unveils robot barista ... $12" beside the real
+  Brooklyn $15 million bird, "OpenAI pauses" beside "OpenAI fires". Now the form comes from
+  a day's headline NOT in the game, names come from that wider list, and `gates.check_fake`
+  rejects one shared name or the same opening as its round. Do not reintroduce copying a
+  neighbour for variety; vary from outside the round.
 - **No story twice in a week.** Kid Rock turned up twice in three days. `memory.json` (served
   beside the puzzle, never committed) holds a week of real headlines; `build.echoes` drops
   a candidate sharing a two-word name or the same-story test with one.
@@ -64,9 +69,14 @@ The point is to show how insane the world is. Every rule below serves that.
   forced rebuild spends ~10 Gemini calls of a 20/day-per-model allowance. Cloudflare is
   deliberately unused (its allowance is shared with Ghostwriters and Photocopy).
 - A dropped mode prints which rule rejected each fake in the run log.
-- Sources: One Story's history plus `pool.ODDITIES` (UPI, NY Post, Metro, Sky News weird
-  sections, last 24h). Mirror and Daily Star weird feeds were filler; r/nottheonion via
-  redlib was rate-limited (both 11/10/2026).
+- Sources: One Story's history plus `pool.ODDITIES` (UPI, NY Post weird sections) and
+  `pool.SEARCHES`, Google News searches for "bizarre", "world record", "unusual", "weird",
+  "strange" (last 24h, English only). One Story alone is hard news: on 15/10/2026 only 2
+  of 883 headlines were strange stories and the picks were Domino's rights and an airport
+  closure; the searches add ~280. Metro and Sky had gone a week without a post; Mirror and
+  Daily Star were filler; r/nottheonion via redlib was rate-limited.
+- Each failed provider rung prints `llm: ...` as it happens. A day built by Groq means
+  Gemini was spent, usually by a failed or forced build earlier the same Pacific day.
 
 ## Declined
 

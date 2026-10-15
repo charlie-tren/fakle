@@ -7,7 +7,7 @@ DAY = REALS + ["Trump strikes diesel deal with Putin", "Mexico court finds three
 
 
 def test_good_fake_passes():
-    assert gates.check_fake("Spain asks UN to fund umbrella museum in China", REALS, DAY) == []
+    assert gates.check_fake("Mexico opens national umbrella museum on a quiet mountain road", REALS, DAY) == []
 
 
 def test_copy_of_a_real_fails():
@@ -95,19 +95,48 @@ def test_fake_that_extends_a_story_in_its_round_fails():
     assert "borrows from its round" in gates.check_fake(fake, reals, reals)
 
 
-def test_one_shared_name_is_allowed():
-    reals = ["Japanese brewer designs 'wobbly' beer glass to encourage responsible drinking",
-             "UAE school pupils turn feathers into fertiliser as plans to combat waste take flight",
-             "China unveils robot that helps farmers breed better wheat"]
-    fake = "Japanese town pays residents to adopt abandoned vending machines"
-    assert "borrows from its round" not in gates.check_fake(fake, reals, reals + ["town pays residents to adopt abandoned vending machines"])
+def test_one_shared_name_is_a_twin():
+    # Frances, 15/10/2026: "u could also tell what the ai was copying".
+    reals = ["Brooklyn store in Kelly Clarkson feud says Molly the mechanical bird is now on sale for $15 million",
+             "A giant inflatable grub could hold the key to a big workplace dispute",
+             "Rockland Bakery breaks world record with 41-inch croissant"]
+    fake = "Brooklyn bakery unveils robot barista that serves custom lattes for $12"
+    assert "borrows from its round" in gates.check_fake(fake, reals, reals)
+    reals2 = ["OpenAI fires employee after finding recording device in conference room",
+              "S. Korea to inspect every Suneung test-taker's glasses amid smart-glasses cheating fears",
+              "World's Largest Hairdryer Unveiled At Huddersfield Town Stadium"]
+    fake2 = "OpenAI pauses chatbot rollout after discovering biased training data from archived forums"
+    assert "borrows from its round" in gates.check_fake(fake2, reals2, reals2)
+
+
+def test_a_capitalised_common_word_is_not_a_shared_name():
+    # Title Case capitalises everything; a word the day writes in lower case is not a name.
+    reals = ["You Do Not Need An AI Matchmaker In The City",
+             "Rockland Bakery breaks world record with 41-inch croissant",
+             "Opossum caught on fishing hook rescued from tree"]
+    fake = "Town Council Votes To Paint Every Bin In The City Pink"
+    day = reals + ["residents in the city need a new bin"]
+    assert "borrows from its round" not in gates.check_fake(fake, reals, day)
+
+
+def test_a_fake_must_not_copy_the_opening_of_its_round():
+    reals = ["'I bathe, wash dishes, apply make-up': Japan's PM says busier than men who came before",
+             "Germany briefly shuts Nuremberg airport and scrambles jets to escort flight",
+             "Afghan batter recreates infamous hamstring injury used against Australia"]
+    fake = "'I run, code, debug': Germany's chancellor says workload exceeds previous cabinets"
+    assert "copies the opening of its round" in gates.check_fake(fake, reals, reals)
+    reals2 = ["Trump's US Super Intelligence Force and AI czar Jay Clayton",
+              "Trump threatens renewed military action against Iran",
+              "MAGA Supporters Clap 'Like Seals' as Trump Promises Secret Healthcare Fix"]
+    fake2 = "Trump's US Border Data Center and Jen Psaki"
+    assert "copies the opening of its round" in gates.check_fake(fake2, reals2, reals2, required="trump")
 
 
 def test_required_word_does_not_count_as_borrowing():
     reals = ["Trump says Nobel committee left a stain on Norway",
              "Trump picks Katie Zacharia as press secretary",
              "Trump slams Zelenskyy over diesel prices"]
-    fake = "Trump orders gold-plated golf carts for Norway visit"
+    fake = "Trump orders gold-plated golf carts for diesel summit"
     assert "borrows from its round" not in gates.check_fake(fake, reals, reals, required="trump")
 
 

@@ -11,9 +11,10 @@ PICK = """You are choosing headlines for Fakle, a daily game whose whole point i
 how strange the world is. Players see four headlines, three real and one invented, and
 try to spot the invented one.
 
-From the numbered real headlines below, choose the {n} most absurd, the ones a reader
-would least believe are real, and the funniest. The bar is
-"Candidate named Hitler Mussolini elected mayor in Peru": true, and barely believable.
+From the numbered real headlines below, choose the {n} weirdest, funniest and
+most absurd: the ones a reader would least believe are real and would read out to a friend.
+The bar is "Candidate named Hitler Mussolini elected mayor in Peru": true, and barely
+believable. Funny beats important every time.
 {focus}
 {examples}
 Leave out anything boring: ordinary politics, markets, sport results, routine business,
@@ -37,16 +38,17 @@ Right: "Japanese brewer designs 'wobbly' beer glass to encourage responsible dri
 "Russian taxi drivers told to use Google Maps after drones hit Yandex", "Every game could be
 the last one for Don Manuel, the 105-year-old chess player".
 Wrong, however important: "Hezbollah outlines financial aid plan for Lebanese with
-destroyed homes", "Poland blames Starlink sabotage on Russia", "India's opposition marches
-on Supreme Court as protests gain ground".
+destroyed homes", "Poland blames Starlink sabotage on Russia", "Domino's faces losing
+international rights in pizza empire reshuffle", "Germany briefly shuts Nuremberg airport
+and scrambles jets to escort flight with radio problem".
 """
 
 TRUMP_FOCUS = ("Every headline here involves Trump: pick the craziest things Trump said, "
                "did or was caught up in today, not the routine politics.")
 
-# Each fake copies the form of one real in its round (Charlie, 14/10/2026: "can the style
-# of the fakes vary as well?"). Fixed shapes were a house style of their own, and the quote
-# shape made the vaguest headline in its round.
+# Each fake takes the form of one of the day's headlines that is NOT in the game (Charlie,
+# 14/10/2026: "can the style of the fakes vary as well?"). Fixed shapes were a house style of
+# their own; a form taken from a real in its own round made a visible twin (15/10/2026).
 
 FAKE = """You are writing the invented headline for each round of a daily game.
 Each round has three real headlines. Write ONE new headline per round that a
@@ -59,12 +61,13 @@ to combat afternoon heat".
 Rules:
 - Never end with an "amid ...", "as ...", "ahead of ..." or "after ..." clause. That
   crutch is how earlier fakes gave themselves away.
-- Each fake is in the same broad area as its round but a different story from all
-  three, not a spin-off of one. Wrong: beside "Alberta woman, 61, breaks her own world record by planking for 5 hours",
-  writing "Canadian health board bans plank competitions longer than three hours".
-- Each fake reports a different event from all three in its round. Never combine,
-  rephrase or borrow phrases from them: a fake stitched from its neighbours is the
-  first thing a player spots.
+- Each fake is in the same broad area as its round but shares NOTHING with its three:
+  no name, place, organisation, opening words, quote opening or story. A fake that looks
+  like a twin of a real beside it is the first thing a player spots. Wrong: beside
+  "Brooklyn store in Kelly Clarkson feud says Molly the mechanical bird is now on sale for
+  $15 million", writing "Brooklyn bakery unveils robot barista that serves custom lattes for
+  $12". Wrong: beside "Alberta woman, 61, breaks her own world record by planking for 5
+  hours", writing "Canadian health board bans plank competitions longer than three hours".
 - Steer well clear of every real story below, the other headlines included:
   never restate, paraphrase, extend or contradict one. A fake that turns out to be true is
   the worst mistake this game can make. Put the names in a situation none of today's
@@ -75,8 +78,8 @@ Rules:
 - As specific as the real ones: a named place, organisation or person from the lists
   below. Vague fakes ("local council chief", "three pilots", "officials") are the first
   ones players spot. Use a number only if a real one in its round has one.
-- Only name people, places and organisations that appear somewhere in the real
-  headlines below, including the list of other real headlines from today.
+- Take every name, place and organisation from the list of other real headlines from
+  today, never from the three in its round.
 - Never claim anyone committed a crime, did anything sexual, is ill or died.
 - Never make a household-name company, brand or celebrity the subject. Strange true
   stories are almost always about obscure local players, so a famous name doing something
@@ -89,7 +92,7 @@ Rules:
 
 {rounds}
 
-Other real headlines from today (for names only, not phrasing):
+Other real headlines from today, not in the game (the source of every name):
 {others}"""
 
 
@@ -161,7 +164,7 @@ def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = N
                 others: list[dict] | None = None, required: str | None = None,
                 seed: str = "", hard: list[str] | None = None) -> str:
     blocks = []
-    start = sum(map(ord, seed)) % 3
+    start = sum(map(ord, seed))
     for n, r in enumerate(rounds):
         # No source labels: the model copies them into its fake.
         lines = "\n".join(f"- {x['text']}" for x in r)
@@ -172,10 +175,12 @@ def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = N
         # pad its fakes with a stray last word to hit it.
         mean = sum(len(x["text"].split()) for x in r) / len(r)
         lo, hi = round(mean * 0.7 + 0.49), int(mean * 1.3)
-        model = r[(start + n) % len(r)]["text"]
-        shape = (f"\nForm: write it in the form of \"{model}\": the same kind of opening, "
-                 "punctuation and register, a different story."
-                 f"\nLength: between {lo} and {hi} words.")
+        shape = ""
+        if others:
+            model = others[(start + 7 * n) % len(others)]["text"]
+            shape = (f"\nForm: the shape of \"{model}\" (its kind of opening, punctuation "
+                     "and register), none of its story.")
+        shape += f"\nLength: between {lo} and {hi} words."
         blocks.append(f"Round {n + 1}:\n{lines}{shape}{extra}")
     other = "\n".join(f"- {x['text']}" for x in (others or [])) or "(none)"
     # Earlier fakes that most players took for real: the register to aim for.

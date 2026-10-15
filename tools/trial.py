@@ -5,6 +5,7 @@ the free tier allows 20 calls a day and seven dates can need more than that.
 
     python tools/trial.py [YYYY-MM-DD ...]
 """
+import datetime as dt
 import json
 import sys
 from pathlib import Path
@@ -25,6 +26,9 @@ for d in sys.argv[1:] or DATES:
         if h is None:
             print(f"{d}: no One Story history")
             continue
+        # The strange-news feeds only reach back a day, so only a recent date gets them.
+        if d >= str(dt.date.fromisoformat(pool.sydney_today()) - dt.timedelta(days=1)):
+            h["articles"] = h["articles"] + pool.load_oddities()
         p = build.build(d, h, lambda prompt: llm.generate(prompt))
         if p["normal"] is None and p["trump"] is None:
             print(f"{d}: nothing built (quota?), not saved")

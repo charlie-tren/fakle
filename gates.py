@@ -95,11 +95,23 @@ def check_fake(fake: str, reals: list[str], day_titles: list[str], required: str
         fails.append("number")
     if not named and not counted:
         fails.append("vague")
-    # Two names shared with one real in its own round means the fake is that story
-    # extended ("Chad Smith launches Mocha Chad coffee line" beside the real Chad Smith).
-    mine = _proper_nouns(fake) - {required}
-    if any(len(mine & _proper_nouns(r)) >= 2 for r in reals):
+    # Any name shared with a real in its own round makes the pair twins, and the twin
+    # nobody has heard of is the fake (15/10/2026: "Brooklyn bakery unveils robot barista
+    # ... for $12" beside the real Brooklyn $15 million bird; "OpenAI pauses" beside
+    # "OpenAI fires"). A name is a capitalised word the day never writes in lower case.
+    lower = {w for t in day_titles for tok in re.findall(r"[A-Za-z][\w']*", t)
+             if tok[0].islower() for w in words(tok)}
+    mine = _proper_nouns(fake) - lower - {required}
+    if any(mine & _proper_nouns(r) for r in reals):
         fails.append("borrows from its round")
+    # The same opening as a real beside it, or a quote opening beside a quote opening
+    # ("'I run, code, debug': Germany's chancellor" beside "'I bathe, wash dishes': Japan's PM").
+    def opening(t):
+        return [re.sub(r"'s$", "", w) for w in t.lower().split()[:2]]
+    def quoted(t):
+        return t[:1] in ("'", '"')
+    if any(opening(fake) == opening(r) or (quoted(fake) and quoted(r)) for r in reals):
+        fails.append("copies the opening of its round")
     # The same story by its content words: two shared with a real in its own round, or
     # three with any headline of the day (Charlie, 11/10/2026: "Ruto proposes camel milk
     # tax" beside the real Ruto milk headline).

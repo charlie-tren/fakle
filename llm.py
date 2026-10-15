@@ -66,7 +66,11 @@ def generate(prompt: str, temperature: float = 0.9) -> tuple[str, str]:
                 return gemini.generate(prompt, temperature=temperature, model=model), f"{name}/{model}"
             return _groq(prompt, temperature, model), f"{name}/{model}"
         except Exception as exc:                     # noqa: BLE001
-            problems.append(f"{name}/{model}: {type(exc).__name__} {str(exc)[:300]}")
+            # A connection error's text carries the request URL, key included.
+            why = f"{name}/{model}: {type(exc).__name__} {re.sub(r'key=[^&\s]+', 'key=***', str(exc))[:300]}"
+            # Printed as it happens: a day built on the last rung should say why.
+            print(f"llm: {why[:200]}")
+            problems.append(why)
     raise NoProvider(" | ".join(problems))
 
 

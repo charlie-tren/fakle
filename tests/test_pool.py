@@ -120,6 +120,27 @@ def test_oddity_feed_keeps_the_last_day_and_drops_video_clips():
                     "source": "UPI", "url": "https://u/1"}]
 
 
+SEARCH_RSS = """<?xml version="1.0"?><rss><channel>
+<item><title>Rockland Bakery breaks world record with 41-inch croissant - The Journal News</title>
+ <link>https://g/1</link><pubDate>Sun, 11 Oct 2026 02:00:00 +0000</pubDate><source>The Journal News</source></item>
+<item><title>Kim Min's Realistic Acting Enhances 'Between Steps' - 조선일보</title>
+ <link>https://g/2</link><pubDate>Sun, 11 Oct 2026 02:00:00 +0000</pubDate><source>조선일보</source></item>
+</channel></rss>"""
+
+
+def test_a_search_feed_names_each_outlet_and_keeps_english_titles():
+    import datetime as dt
+    now = dt.datetime(2026, 10, 11, 18, 0, tzinfo=dt.timezone.utc)
+    got = pool.parse_feed(SEARCH_RSS.encode(), None, now)
+    assert [g["source"] for g in got] == ["The Journal News"]
+    assert pool.clean_title(got[0]["title"]) == "Rockland Bakery breaks world record with 41-inch croissant"
+
+
+def test_opinion_addressed_to_the_reader_is_not_a_headline():
+    assert not pool.usable("You Do Not Need An AI Matchmaker. You Need To Go Outside.")
+    assert not pool.usable("Top 5 weirdest things I saw at ACL")
+
+
 def test_a_broken_oddity_feed_costs_nothing(monkeypatch):
     def boom(*a, **k):
         raise OSError("down")
