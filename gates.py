@@ -84,12 +84,22 @@ def check_fake(fake: str, reals: list[str], day_titles: list[str], required: str
         fails.append("required")
     if fake.endswith(")"):
         fails.append("format")
+    # The prompt bans the trailing "amid ..." crutch and the model wrote it anyway (trial,
+    # 15/10/2026). Allowed where a real in its round has one, so it is not a fake-only trait.
+    trail = re.compile(r"\s(amid|as|ahead of|after|despite|in bid to)\s", re.I)
+    if trail.search(fake) and not any(trail.search(r) for r in reals):
+        fails.append("trailing clause")
     # A real headline names its subject or counts something; "local council chief" and
     # "three pilots" were the fakes players spotted first (14/10/2026).
+    # A word is a name if the day never writes it in lower case: Title Case headlines made
+    # "Local" a name, and "Local council bans neon signage after midnight" passed (15/10/2026).
+    lower = {w for t in day_titles for tok in re.findall(r"[A-Za-z][\w']*", t)
+             if tok[0].islower() for w in words(tok)}
     toks = re.findall(r"[A-Za-z][\w']*", fake)
-    named = [t for t in toks[1:] if t[0].isupper() and t.lower() != required]
+    named = [t for t in toks[1:] if t[0].isupper() and words(t) - lower - {"s", required}]
     # The first word is capitalised either way; it is a name if the day writes it as one.
-    if toks and toks[0].lower() != required and toks[0].lower() in _mid_caps(day_titles) | US_STATES:
+    if toks and toks[0].lower() != required and words(toks[0]) - lower - {"s"} and \
+            toks[0].lower() in _mid_caps(day_titles) | US_STATES:
         named.append(toks[0])
     # A number only where its round has one: asked for "a concrete detail", every fake
     # on the 14/10 trial carried a figure and almost no real did.
@@ -102,8 +112,6 @@ def check_fake(fake: str, reals: list[str], day_titles: list[str], required: str
     # nobody has heard of is the fake (15/10/2026: "Brooklyn bakery unveils robot barista
     # ... for $12" beside the real Brooklyn $15 million bird; "OpenAI pauses" beside
     # "OpenAI fires"). A name is a capitalised word the day never writes in lower case.
-    lower = {w for t in day_titles for tok in re.findall(r"[A-Za-z][\w']*", t)
-             if tok[0].islower() for w in words(tok)}
     mine = _proper_nouns(fake) - lower - {required}
     if any(mine & _proper_nouns(r) for r in reals):
         fails.append("borrows from its round")

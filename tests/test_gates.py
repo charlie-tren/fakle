@@ -119,6 +119,19 @@ def test_a_capitalised_common_word_is_not_a_shared_name():
     assert "borrows from its round" not in gates.check_fake(fake, reals, day)
 
 
+def test_a_title_case_word_is_not_a_name_and_a_trailing_clause_fails():
+    # Both from the 15/10/2026 trial.
+    reals = ["Rockland Bakery breaks world record with 41-inch croissant",
+             "Finnish man downs 16.9 ounces of orange soda in 3.16 seconds",
+             "World's Heaviest Pumpkin Sets Incredible New Record at 2,856 lbs."]
+    day = reals + ["Local Elections Draw Record Turnout", "a local café shuts after midnight",
+                   "Ontario heritage group restores a carousel in the old park"]
+    assert "vague" in gates.check_fake("Local council bans neon signage after midnight to curb distractions", reals, day)
+    fake = "Ontario heritage group launches carousel restoration amid rising tourism demand"
+    assert "trailing clause" in gates.check_fake(fake, reals, day)
+    assert "trailing clause" not in gates.check_fake(fake, reals[:2] + ["Pumpkin record falls amid heatwave"], day)
+
+
 def test_a_fake_must_not_copy_the_opening_of_its_round():
     reals = ["'I bathe, wash dishes, apply make-up': Japan's PM says busier than men who came before",
              "Germany briefly shuts Nuremberg airport and scrambles jets to escort flight",
