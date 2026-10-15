@@ -123,6 +123,8 @@ def test_oddity_feed_keeps_the_last_day_and_drops_video_clips():
 SEARCH_RSS = """<?xml version="1.0"?><rss><channel>
 <item><title>Rockland Bakery breaks world record with 41-inch croissant - The Journal News</title>
  <link>https://g/1</link><pubDate>Sun, 11 Oct 2026 02:00:00 +0000</pubDate><source>The Journal News</source></item>
+<item><title>Anantara sets record with 101-metre mango sticky rice - Travel Daily News Asia-Pacific</title>
+ <link>https://g/3</link><pubDate>Sun, 11 Oct 2026 02:00:00 +0000</pubDate><source>Travel Daily News Asia-Pacific</source></item>
 <item><title>Kim Min's Realistic Acting Enhances 'Between Steps' - 조선일보</title>
  <link>https://g/2</link><pubDate>Sun, 11 Oct 2026 02:00:00 +0000</pubDate><source>조선일보</source></item>
 </channel></rss>"""
@@ -132,8 +134,15 @@ def test_a_search_feed_names_each_outlet_and_keeps_english_titles():
     import datetime as dt
     now = dt.datetime(2026, 10, 11, 18, 0, tzinfo=dt.timezone.utc)
     got = pool.parse_feed(SEARCH_RSS.encode(), None, now)
-    assert [g["source"] for g in got] == ["The Journal News"]
+    assert [g["source"] for g in got] == ["The Journal News", "Travel Daily News Asia-Pacific"]
     assert pool.clean_title(got[0]["title"]) == "Rockland Bakery breaks world record with 41-inch croissant"
+    assert pool.clean_title(got[1]["title"]) == "Anantara sets record with 101-metre mango sticky rice"
+
+
+def test_a_headline_that_calls_itself_strange_is_flagged():
+    assert pool.LABEL.search("Trump posts bizarre AI video of himself taming tiger")
+    assert pool.LABEL.search("Honda Re-Recalls Accords Over Very Unusual Problem")
+    assert not pool.LABEL.search("World's Largest Hairdryer Unveiled At Huddersfield Town Stadium")
 
 
 def test_opinion_addressed_to_the_reader_is_not_a_headline():

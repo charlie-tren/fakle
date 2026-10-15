@@ -69,12 +69,14 @@ The point is to show how insane the world is. Every rule below serves that.
   forced rebuild spends ~10 Gemini calls of a 20/day-per-model allowance. Cloudflare is
   deliberately unused (its allowance is shared with Ghostwriters and Photocopy).
 - A dropped mode prints which rule rejected each fake in the run log.
-- Sources: One Story's history plus `pool.ODDITIES` (UPI, NY Post weird sections) and
-  `pool.SEARCHES`, Google News searches for "bizarre", "world record", "unusual", "weird",
-  "strange" (last 24h, English only). One Story alone is hard news: on 15/10/2026 only 2
-  of 883 headlines were strange stories and the picks were Domino's rights and an airport
-  closure; the searches add ~280. Metro and Sky had gone a week without a post; Mirror and
-  Daily Star were filler; r/nottheonion via redlib was rate-limited.
+- Sources: One Story's history plus `pool.ODDITIES` (UPI, NY Post, Mirror weird sections,
+  NDTV Offbeat) and `pool.SEARCHES`, Google News searches for world records (last 24h,
+  English only). One Story alone is hard news: on 15/10/2026 only 2 of 883 headlines were
+  strange stories and the picks were Domino's rights and an airport closure. Searches for
+  "bizarre", "weird", "unusual" were tried and dropped: the word sits in nearly every
+  title. A real carrying such a word (`pool.LABEL`) is never picked, and a fake carrying
+  one fails, for the same reason as allegations: it would mark the answer. Metro and Sky
+  had gone a week without a post; Daily Star was filler; Reddit's nottheonion feed 429s.
 - Each failed provider rung prints `llm: ...` as it happens. A day built by Groq means
   Gemini was spent, usually by a failed or forced build earlier the same Pacific day.
 

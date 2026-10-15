@@ -28,16 +28,21 @@ NOT_HEADLINE = re.compile(
     r"the conversation|you|your|top \d+)\b|(?-i:[A-Z][A-Z ]{3,}:))", re.I)
 DUPE = 0.6
 # One Story's outlets are hard news; the strangest stories of a day are thin in them
-# (probed 11/10/2026). Tabloid weird sections (Mirror, Daily Star) were lifestyle filler;
-# Metro's and Sky's went quiet for a week (15/10/2026), leaving 2 strange headlines in 883.
+# (probed 11/10/2026). Metro's and Sky's went quiet for a week (15/10/2026), leaving 2
+# strange headlines in 883. Mirror's is part filler but posts daily.
 ODDITIES = {
     "UPI": "https://rss.upi.com/news/odd_news.rss",
     "New York Post": "https://nypost.com/weird-but-true/feed/",
+    "Mirror": "https://www.mirror.co.uk/news/weird-news/?service=rss",
+    "NDTV": "https://feeds.feedburner.com/ndtvnews-offbeat-news",
 }
-# Every outlet's strange stories, found by the words they are written up with. Noisy
-# (sport and reviews come too); the shortlist step is what reads them.
+# Every outlet's record attempts. Searches for "bizarre", "weird" or "unusual" were tried
+# and dropped: almost every result carries the word in its title, which marks it as real.
 SEARCH = "https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US:en&q={q}%20when:1d"
-SEARCHES = ["bizarre", "%22world%20record%22", "unusual", "weird", "strange"]
+SEARCHES = ["%22world%20record%22", "%22Guinness%20World%20Records%22"]
+# A headline that calls itself strange is real by construction: no fake would say so.
+LABEL = re.compile(r"\b(bizarre\w*|weird\w*|strange\w*|unusual\w*|quirk\w*|odd|oddly|wacky|"
+                   r"baffl\w*|bonkers)\b", re.I)
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                     "(KHTML, like Gecko) Chrome/130.0 Safari/537.36"}
 
@@ -69,10 +74,13 @@ def parse_feed(body: bytes, source: str | None, now: dt.datetime) -> list[dict]:
             continue
         if (now - when).total_seconds() > 86400 or title.lower().startswith("watch:"):
             continue
-        if source is None and not clean_title(title).isascii():
-            continue
-        out.append({"title": title, "source": source or (it.findtext("source") or "").strip(),
-                    "url": (it.findtext("link") or "").strip()})
+        src = source or (it.findtext("source") or "").strip()
+        if source is None:
+            if not clean_title(title).isascii():
+                continue
+            # The outlet goes on the end; SUFFIX misses names with a hyphen in them.
+            title = title.removesuffix(f" - {src}")
+        out.append({"title": title, "source": src, "url": (it.findtext("link") or "").strip()})
     return out
 
 

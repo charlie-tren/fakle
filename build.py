@@ -198,7 +198,7 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
     # A real carrying a barred word could never be the fake, so it would be a free
     # elimination. It stays in the day's vocabulary; it just cannot be picked.
     day = day if day is not None else [x["text"] for x in p]
-    p = [x for x in p if not gates.ALLEGATION.search(x["text"])]
+    p = [x for x in p if not gates.ALLEGATION.search(x["text"]) and not pool.LABEL.search(x["text"])]
     if required is None:
         p = [x for x in p if not DARK.search(x["text"])]
     if recent:
@@ -244,8 +244,13 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
         # The name source must match the gate's vocabulary, which is the whole day:
         # shown only Trump headlines, the writer invented names the gate then rejected.
         taken = {p[i]["text"] for i in picked}
-        rest = [x for x in others_pool if x["text"] not in taken and not gates.ALLEGATION.search(x["text"])]
-        others = random.Random(seed).sample(rest, min(OTHERS, len(rest)))
+        # General fakes draw first on the strange stories nominated and not picked: names
+        # from hard news made dull fakes ("Posco Future M launches AI-driven mineral
+        # survey", trial 15/10/2026). Trump's leftovers are his other stories, too close.
+        lead = [] if required else [x for i, x in enumerate(p) if i not in picked][:OTHERS // 2]
+        skip = taken | {x["text"] for x in lead}
+        rest = [x for x in others_pool if x["text"] not in skip and not gates.ALLEGATION.search(x["text"])]
+        others = lead + random.Random(seed).sample(rest, min(OTHERS - len(lead), len(rest)))
     fakes: dict[int, str] = {}
     notes: dict[int, list[str]] = {}
     todo = list(range(len(rounds)))

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 
-from pool import clean_title, words
+from pool import LABEL, clean_title, words
 
 OVERLAP = 0.6
 LEN_LO, LEN_HI = 0.7, 1.3
@@ -74,6 +74,9 @@ def check_fake(fake: str, reals: list[str], day_titles: list[str], required: str
         fails.append("length")
     if ALLEGATION.search(fake):
         fails.append("allegation")
+    # No real carries one (build drops them), so a fake that did would be the answer.
+    if LABEL.search(fake):
+        fails.append("label")
     known = set().union(*(words(t) for t in day_titles))
     if _proper_nouns(fake) - known - US_STATES:
         fails.append("new name")
