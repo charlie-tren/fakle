@@ -85,6 +85,19 @@ def test_groq_waits_out_a_per_minute_limit_once(monkeypatch):
     assert slept and 12.9 <= slept[0] <= 15
 
 
+def test_groq_reads_a_wait_given_in_milliseconds(monkeypatch):
+    # "Please try again in 885ms" was read as no hint, so the call gave up (15/10/2026).
+    replies = [_Resp(429, {"error": {"message": "Rate limit reached on tokens per minute (TPM): "
+                                                "Limit 8000, Used 4653. Please try again in 885ms."}}),
+               _Resp(200, {"choices": [{"message": {"content": "{}"}}]})]
+    slept = []
+    monkeypatch.setenv("GROQ_API_KEY", "k")
+    monkeypatch.setattr(llm.requests, "post", lambda *a, **k: replies.pop(0))
+    monkeypatch.setattr(llm.time, "sleep", lambda s: slept.append(s))
+    assert llm._groq("p", 0.9, "openai/gpt-oss-120b") == "{}"
+    assert slept and 0.885 <= slept[0] <= 3
+
+
 def test_groq_does_not_wait_out_a_daily_limit(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "k")
     monkeypatch.setattr(llm.requests, "post", lambda *a, **k: _Resp(429, {"error": {"message": "tokens per day (TPD). Please try again in 9m12s."}}))

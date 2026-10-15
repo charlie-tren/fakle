@@ -49,9 +49,11 @@ def _groq(prompt: str, temperature: float, model: str) -> str:
         if r.status_code == 200:
             return r.json()["choices"][0]["message"]["content"]
         # A per-minute limit clears in seconds and is worth one wait; a per-day one is not.
-        wait = re.search(r"try again in ([0-9.]+)s", r.text)
-        if attempt < 3 and r.status_code == 429 and "per minute" in r.text and wait and float(wait.group(1)) <= 60:
-            time.sleep(float(wait.group(1)) + 1)
+        # The hint comes in seconds or milliseconds ("try again in 885ms", 15/10/2026).
+        wait = re.search(r"try again in ([0-9.]+)(ms|s)", r.text)
+        secs = float(wait.group(1)) / (1000 if wait.group(2) == "ms" else 1) if wait else None
+        if attempt < 3 and r.status_code == 429 and "per minute" in r.text and secs is not None and secs <= 60:
+            time.sleep(secs + 1)
             continue
         raise NoProvider(f"HTTP {r.status_code}: {r.text}")
     raise NoProvider("unreachable")
@@ -69,7 +71,7 @@ def generate(prompt: str, temperature: float = 0.9) -> tuple[str, str]:
             # A connection error's text carries the request URL, key included.
             why = f"{name}/{model}: {type(exc).__name__} {re.sub(r'key=[^&\s]+', 'key=***', str(exc))[:300]}"
             # Printed as it happens: a day built on the last rung should say why.
-            print(f"llm: {why[:200]}")
+            print("llm: " + " ".join(why.split())[:200])
             problems.append(why)
     raise NoProvider(" | ".join(problems))
 
