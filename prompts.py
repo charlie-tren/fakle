@@ -22,10 +22,7 @@ diplomacy and policy announcements, however important. Leave out deaths, disaste
 violence. If a headline would not make someone say "wait, really?", it does not belong.
 
 Group them into {rounds} rounds of {per}. Use each headline at most once. Each round's
-headlines are about three different stories. Where you can, the three in a round share a
-broad area (animals, food, science and tech, small towns, odd rules, records and
-hobbies...) and each round is a different area from the others. Strangeness comes first:
-never leave out a stranger headline to make a group fit; a looser group is fine.
+headlines are about three different stories on three different topics.
 
 Reply with JSON only: {{"rounds": [[i, j, k], ...]}}
 
@@ -59,7 +56,7 @@ to combat afternoon heat".
 Rules:
 - Never end with an "amid ...", "as ...", "ahead of ..." or "after ..." clause. That
   crutch is how earlier fakes gave themselves away.
-- Each fake is in the same broad area as its round but shares NOTHING with its three:
+- Each fake is on a different topic from its three and shares NOTHING with them:
   no name, place, organisation, opening words, quote opening or story. A fake that looks
   like a twin of a real beside it is the first thing a player spots. Wrong: beside
   "Brooklyn store in Kelly Clarkson feud says Molly the mechanical bird is now on sale for

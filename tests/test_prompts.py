@@ -129,10 +129,11 @@ def test_fake_prompt_warns_off_famous_brands():
 
 
 
-def test_pick_prompt_groups_rounds_by_area_without_dropping_stranger_stories():
+def test_rounds_are_mixed_not_grouped_by_topic():
+    # 17/10/2026: with the labels gone, a same-topic round only pushed the fake towards
+    # its neighbours' stories, the copying a player spotted on 15/10.
     p = prompts.pick_prompt(POOL)
-    assert "broad area" in p and "different area" in p
-    assert "never leave out a stranger headline" in p.lower()
+    assert "three different topics" in p and "broad area" not in p
 
 
 def test_pick_prompt_shows_funny_and_dull_examples():
@@ -143,9 +144,9 @@ def test_pick_prompt_shows_funny_and_dull_examples():
 
 
 
-def test_fake_prompt_asks_for_specifics_in_the_round_area():
+def test_fake_prompt_asks_for_specifics_on_another_topic():
     p = prompts.fake_prompt([POOL[0:3]])
-    assert "same broad area" in p and "specific" in p
+    assert "different topic from its three" in p and "specific" in p
 
 
 def test_judge_prompt_and_parse():

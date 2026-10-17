@@ -30,11 +30,12 @@ The point is to show how insane the world is. Every rule below serves that.
   watermelon scanner" was "too obviously fake": strange true stories are about obscure local
   players. Prompt rule.
 - **No invented quotes from named people.** Quotes come from unnamed speakers only.
-- **Rounds are grouped by broad area, but strangeness comes first** (14/10/2026). He asked
-  whether fixed topic labels would block good stories; they would, so there is no fixed
-  list. The picker groups where it can and never drops a stranger story to fit. Groups
-  are not named on the page: shown for a day as labels, Charlie asked to remove them
-  (16/10/2026, "maybe remove category titles"). Only the Trump round is labelled.
+- **Rounds are mixed, not grouped by topic** (17/10/2026). Grouping was built 14/10 for
+  round labels; with the labels removed it only kept the fake on its neighbours' topic,
+  which pushed it towards copying them. Each round's three are on different topics and the
+  fake on a fourth. Only the Trump round is labelled; topic labels were shown 15-16/10
+  and he asked for them off ("maybe remove category titles"). Do not bring back a fixed
+  topic list: it would cut strange stories to fill a slot.
 - **A fake shares nothing with the three beside it** (15/10/2026, a player: "u could tell
   what the ai was copying"). Each fake had copied the form of one real in its round and
   taken names from it: "Brooklyn bakery unveils robot barista ... $12" beside the real
