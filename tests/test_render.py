@@ -425,16 +425,16 @@ def test_a_person_posts_their_result_once(site, browser):
 
 
 
-def test_a_round_shows_its_area_and_the_last_its_trump_label(site, browser):
+def test_only_the_trump_round_is_labelled(site, browser):
     data = json.loads((ROOT / "tests/fixtures/puzzle.json").read_text(encoding="utf-8"))
-    data["rounds"][0]["area"] = "Animals"
+    data["rounds"][0]["area"] = "Animals"   # an older puzzle's field, ignored
     data["trump_round"] = True
     ctx = context(browser, viewport={"width": 1280, "height": 900})
     ctx.route("**/puzzle.json", lambda r: r.fulfill(json=data))
     pg = ctx.new_page()
     pg.goto(site)
     enter(pg)
-    assert pg.locator("#round-label").is_visible() and pg.locator("#round-label").text_content() == "Animals"
+    assert not pg.locator("#round-label").is_visible()
     pg.locator(".headline").first.click()
     pg.locator("#next").click()
     assert not pg.locator("#round-label").is_visible()

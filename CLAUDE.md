@@ -32,8 +32,9 @@ The point is to show how insane the world is. Every rule below serves that.
 - **No invented quotes from named people.** Quotes come from unnamed speakers only.
 - **Rounds are grouped by broad area, but strangeness comes first** (14/10/2026). He asked
   whether fixed topic labels would block good stories; they would, so there is no fixed
-  list. The picker groups where it can, never drops a stranger story to fit, and names
-  each group after forming it; the page shows that name above the round, or nothing.
+  list. The picker groups where it can and never drops a stranger story to fit. Groups
+  are not named on the page: shown for a day as labels, Charlie asked to remove them
+  (16/10/2026, "maybe remove category titles"). Only the Trump round is labelled.
 - **A fake shares nothing with the three beside it** (15/10/2026, a player: "u could tell
   what the ai was copying"). Each fake had copied the form of one real in its round and
   taken names from it: "Brooklyn bakery unveils robot barista ... $12" beside the real

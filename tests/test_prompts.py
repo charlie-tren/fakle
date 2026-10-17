@@ -171,8 +171,6 @@ def test_trump_fakes_read_like_his_coverage_not_satire():
 
 
 
-def test_areas_name_each_round_or_fall_back_to_none():
-    raw = json.dumps({"rounds": [[0, 1, 2], [3, 4, 5]], "areas": ["Animals", "a long name of six words"]})
-    assert prompts.parse_areas(raw, 2) == ["Animals", ""]
-    assert prompts.parse_areas(json.dumps({"rounds": [[0, 1, 2], [3, 4, 5]]}), 2) == ["", ""]
-    assert "areas" in prompts.pick_prompt(POOL)
+def test_rounds_carry_no_area_name():
+    # Charlie, 16/10/2026: "maybe remove category titles". Grouping stays; the name goes.
+    assert "areas" not in prompts.pick_prompt(POOL)

@@ -217,14 +217,14 @@ def test_pick_with_a_same_story_round_is_retried():
     good = {"rounds": [[0, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15], [16, 17, 1]]}
     answers = [bad, good]
     gen = lambda prompt: (json.dumps(answers.pop(0)), "stub")
-    assert build._pick(p, gen)[0] == good["rounds"]
+    assert build._pick(p, gen) == good["rounds"]
 
 
 def test_pick_keeps_a_same_story_round_rather_than_nothing():
     p = [{"text": f"Ukraine president story number {i}, envoy says", "source": "X", "url": ""} for i in range(20)]
     bad = {"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17]]}
     gen = lambda prompt: (json.dumps(bad), "stub")
-    assert build._pick(p, gen)[0] == bad["rounds"]
+    assert build._pick(p, gen) == bad["rounds"]
 
 
 def test_dropped_mode_says_why(capsys):

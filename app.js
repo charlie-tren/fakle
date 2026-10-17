@@ -71,9 +71,7 @@
     current = i;
     var r = rounds[i];
     var picked = state.picks[i];
-    var label = state.trumpRound && i === rounds.length - 1 ? "Trump round" : r.area || "";
-    $("round-label").textContent = label;
-    $("round-label").hidden = !label;
+    $("round-label").hidden = !(state.trumpRound && i === rounds.length - 1);
     $("progress").textContent = "Round " + (i + 1) + " of " + rounds.length + " \u00b7 " + score() + " right";
     var ol = $("round");
     ol.innerHTML = "";

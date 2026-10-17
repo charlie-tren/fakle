@@ -26,10 +26,8 @@ headlines are about three different stories. Where you can, the three in a round
 broad area (animals, food, science and tech, small towns, odd rules, records and
 hobbies...) and each round is a different area from the others. Strangeness comes first:
 never leave out a stranger headline to make a group fit; a looser group is fine.
-Name each round's area in one to three words ("Animals", "Food and drink", "Small
-towns"); if a round has no common thread, its name is "".
 
-Reply with JSON only: {{"rounds": [[i, j, k], ...], "areas": ["...", ...]}}
+Reply with JSON only: {{"rounds": [[i, j, k], ...]}}
 
 {lines}"""
 
@@ -133,17 +131,6 @@ def parse_shortlist(raw, n: int) -> list[int]:
     if not out:
         raise ValueError("no valid picks")
     return out
-
-
-def parse_areas(raw, n: int) -> list[str]:
-    """Each round's area, or "" where the picker gave none or the reply is unusable."""
-    try:
-        a = llm.extract_json(raw).get("areas")
-    except (ValueError, AttributeError):
-        return [""] * n
-    if not isinstance(a, list) or len(a) != n:
-        return [""] * n
-    return [x.strip()[:24] if isinstance(x, str) and len(x.split()) <= 3 else "" for x in a]
 
 
 def parse_pick(raw, pool_len: int, rounds: int = PICK_ROUNDS) -> list[list[int]]:
