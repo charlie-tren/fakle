@@ -1,10 +1,11 @@
-"""Where the text comes from: a ladder of free providers, each tried once.
+"""Where the text comes from: Claude, then a ladder of free providers, each tried once.
 
 Gemini's free tier is 20 calls a day per project PER MODEL, and failed attempts count,
 so a second Gemini model is a separate allowance and the next rung is the retry.
 Groq is a different company's free tier. Cloudflare Workers AI is deliberately not
 used: its daily allowance is shared with Ghostwriters and Photocopy.
 
+    ANTHROPIC_API_KEY   Anthropic API
     GEMINI_API_KEY   Google AI Studio, in its own project
     GROQ_API_KEY     console.groq.com
 """
@@ -16,6 +17,7 @@ import time
 
 import requests
 
+import claude
 import gemini
 
 # Each Gemini model has its own 20-a-day allowance, so four of them come before Groq,
@@ -60,8 +62,14 @@ def _groq(prompt: str, temperature: float, model: str) -> str:
 
 
 def generate(prompt: str, temperature: float = 0.9) -> tuple[str, str]:
-    """Returns (raw text, "provider/model" that produced it)."""
+    """Returns (raw text, "provider/model" that produced it). Claude answers first,
+    on the tier the prompt carries (prompts.Judging), and the ladder is the fallback."""
     problems = []
+    tier = getattr(prompt, "tier", "write")
+    try:
+        return claude.generate(prompt, tier), f"claude/{claude.TIERS[tier][0]}"
+    except claude.ClaudeError as exc:
+        problems.append(f"claude: {exc}")
     for name, model in LADDER:
         try:
             if name == "gemini":

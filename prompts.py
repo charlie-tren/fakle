@@ -110,10 +110,15 @@ Reply with JSON only: {{"picks": [i, j, ...]}}
 {lines}"""
 
 
+class Judging(str):
+    """A prompt for Claude's cheaper judging tier; llm.generate reads `tier`."""
+    tier = "judge"
+
+
 def shortlist_prompt(chunk: list[dict], k: int, required: str | None = None) -> str:
     lines = "\n".join(f"{i}. {x['text']}" for i, x in enumerate(chunk))
     focus = TRUMP_FOCUS if required == "trump" else ""
-    return SHORTLIST.format(k=k, lines=lines, focus=focus)
+    return Judging(SHORTLIST.format(k=k, lines=lines, focus=focus))
 
 
 def parse_shortlist(raw, n: int) -> list[int]:
@@ -201,7 +206,7 @@ per round, in order, and for each a few words on what gave it away.
 def judge_prompt(rounds: list[list[str]]) -> str:
     blocks = ["Round {}:\n{}".format(n + 1, "\n".join(f"{i + 1}. {t}" for i, t in enumerate(r)))
               for n, r in enumerate(rounds)]
-    return JUDGE.format(rounds="\n\n".join(blocks))
+    return Judging(JUDGE.format(rounds="\n\n".join(blocks)))
 
 
 def parse_judge(raw, n: int) -> tuple[list[int], list[str]]:
