@@ -1,7 +1,6 @@
 from types import SimpleNamespace
 
 import anthropic
-import httpx2
 import pytest
 
 import claude
@@ -16,6 +15,14 @@ def _msg(text='{"ok": 1}', stop="end_turn"):
         content=[SimpleNamespace(type="thinking", thinking=""),
                  SimpleNamespace(type="text", text=text)],
         usage=SimpleNamespace(input_tokens=1000, output_tokens=2000))
+
+
+def _api_error(cls, message):
+    """An SDK error without a live response, whatever HTTP library it uses."""
+    exc = cls.__new__(cls)
+    Exception.__init__(exc, message)
+    exc.message = message
+    return exc
 
 
 class Fake:
@@ -73,9 +80,7 @@ def test_missing_key_falls_to_the_gemini_ladder_with_a_warning(live, monkeypatch
 
 
 def test_outage_turns_claude_off_for_the_run(live):
-    req = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
-    live.raises = anthropic.InternalServerError(
-        "overloaded", response=httpx2.Response(529, request=req), body=None)
+    live.raises = _api_error(anthropic.InternalServerError, "overloaded")
     assert llm.generate("p")[1].startswith("gemini/")
     llm.generate("p")
     assert len(live.calls) == 1
