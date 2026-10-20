@@ -21,7 +21,7 @@ on:
         type: boolean
         default: false
   repository_dispatch:
-    types: [heartbeat]
+    types: [heartbeat, heartbeat-fakle]
   push:
     branches: [main]
 permissions:
