@@ -39,10 +39,17 @@ The point is to show how insane the world is. Every rule below serves that.
 - **A fake shares nothing with the three beside it** (15/10/2026, a player: "u could tell
   what the ai was copying"). Each fake had copied the form of one real in its round and
   taken names from it: "Brooklyn bakery unveils robot barista ... $12" beside the real
-  Brooklyn $15 million bird, "OpenAI pauses" beside "OpenAI fires". Now the form comes from
-  a day's headline NOT in the game, names come from that wider list, and `gates.check_fake`
-  rejects one shared name or the same opening as its round. Do not reintroduce copying a
-  neighbour for variety; vary from outside the round.
+  Brooklyn $15 million bird, "OpenAI pauses" beside "OpenAI fires". Names now come from a
+  wider list of the day's headlines, and `gates.check_fake` rejects one shared name or the
+  same opening as its round.
+- **No model headline to copy, from anywhere.** A form model from outside the round made a
+  clone of THAT headline instead ("Nashik potters fire 108 clay lamps in 9 hours" beside
+  the day's "Bhutan builds 108 stupas in 9 hours"), and a name taken from the list came
+  with its headline's story. On 02/11/2026 that, plus bare "new name" notes, failed five
+  builds and left the day without a puzzle. Variety comes from `build.structure_clash`.
+- **A rejection tells the writer what tripped it** (`gates.explain`): the invented words,
+  or the headline a fake retold. Title Case fakes are sent back as Title Case, not as a
+  dozen invented names; the writer works in sentence case and `match_case` sets the case.
 - **No story twice in a week.** Kid Rock turned up twice in three days. `memory.json` (served
   beside the puzzle, never committed) holds a week of real headlines; `build.echoes` drops
   a candidate sharing a two-word name or the same-story test with one.
