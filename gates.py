@@ -63,6 +63,28 @@ def _mid_caps(titles: list[str]) -> set[str]:
     return {t.lower() for title in titles for t in re.findall(r"[A-Za-z][\w']*", title)[1:] if t[0].isupper()}
 
 
+def _lower_vocab(day_titles: list[str]) -> set[str]:
+    return {w for t in day_titles for tok in re.findall(r"[A-Za-z][\w']*", t)
+            if tok[0].islower() for w in words(tok)}
+
+
+def _title_case(t: str, day_titles: list[str]) -> bool:
+    """Mostly capitalised, and two of the capitals are words the day writes in lower case,
+    so a headline made of names ("Senator Jane Hargreaves arrested") is not Title Case."""
+    long = [w.strip("'\"") for w in t.split() if len(w.strip("'\"")) >= 4]
+    caps = [w for w in long if w[:1].isupper()]
+    common = [w for w in caps[1:] if words(w) <= _lower_vocab(day_titles)]
+    return len(long) >= 4 and len(caps) / len(long) >= 0.7 and len(common) >= 2
+
+
+def _new_names(fake: str, day_titles: list[str]) -> list[str]:
+    """Capitalised words today's headlines never use, the first word included: headlines
+    lead with their subject."""
+    known = set().union(*(words(t) for t in day_titles))
+    toks = re.findall(r"[A-Za-z][\w']*", fake)
+    return list(dict.fromkeys(t for t in toks if t[0].isupper() and words(t) - known - US_STATES - {"s"}))
+
+
 def check_fake(fake: str, reals: list[str], day_titles: list[str], required: str | None = None) -> list[str]:
     fake = clean_title(fake)
     fails = []
@@ -77,8 +99,12 @@ def check_fake(fake: str, reals: list[str], day_titles: list[str], required: str
     # No real carries one (build drops them), so a fake that did would be the answer.
     if LABEL.search(fake):
         fails.append("label")
-    known = set().union(*(words(t) for t in day_titles))
-    if _proper_nouns(fake) - known - US_STATES:
+    # In Title Case every word looks like a name, so "Teacher Wins Regional Award For Turning
+    # Classroom Bins..." failed as invented names (02/11/2026). The writer is asked for
+    # sentence case and build.match_case sets the round's case after the gates.
+    if _title_case(fake, day_titles):
+        fails.append("title case")
+    elif _new_names(fake, day_titles):
         fails.append("new name")
     if required and required not in fw:
         fails.append("required")
@@ -131,3 +157,26 @@ def check_fake(fake: str, reals: list[str], day_titles: list[str], required: str
             any(len(c & _content(t, required)) >= 3 for t in day_titles):
         fails.append("same story")
     return fails
+
+
+def explain(fake: str, fails: list[str], reals: list[str], day_titles: list[str],
+            required: str | None = None) -> list[str]:
+    """The fails, with the words or headline that tripped each where the gate knows them.
+    A bare "new name" sent back five times got five new invented names (02/11/2026: 35 of
+    74 rejections, no puzzle that day); the writer can only fix what it is shown."""
+    fake = clean_title(fake)
+    out = []
+    for f in fails:
+        if f == "new name":
+            f = (f"new name ({', '.join(_new_names(fake, day_titles))} not in today's headlines; "
+                 "use only names from the list)")
+        elif f == "title case":
+            f = "written in Title Case; use sentence case, capitals only on the first word and names"
+        elif f == "same story":
+            c = _content(fake, required)
+            hit = next((r for r in reals if len(c & _content(r, required)) >= 2), None) or \
+                next((t for t in day_titles if len(c & _content(t, required)) >= 3), None)
+            if hit:
+                f = f'same story as "{hit}"'
+        out.append(f)
+    return out

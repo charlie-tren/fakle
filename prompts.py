@@ -67,7 +67,8 @@ Rules:
   never restate, paraphrase, extend or contradict one. A fake that turns out to be true is
   the worst mistake this game can make. Put the names in a situation none of today's
   headlines describe.
-- Same length, register, punctuation and capitalisation style as its three.
+- Same length, register and punctuation as its three. Always sentence case: a capital
+  only on the first word and on names (the page sets each round's case afterwards).
 - Same spelling convention as its three (American if they are American).
 - Plausible, a little strange, never a joke.
 - As specific as the real ones: a named place, organisation or person from the lists

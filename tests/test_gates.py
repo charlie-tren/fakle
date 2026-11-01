@@ -132,6 +132,27 @@ def test_a_title_case_word_is_not_a_name_and_a_trailing_clause_fails():
     assert "trailing clause" not in gates.check_fake(fake, reals[:2] + ["Pumpkin record falls amid heatwave"], day)
 
 
+def test_explain_names_the_invented_words_and_the_matching_story():
+    # 02/11/2026: "new name" alone, five times over, and no puzzle that day.
+    reals = ["Pickering to relocate public library branch into former curling rink, documents show",
+             "Rockland Bakery breaks world record with 41-inch croissant",
+             "Ohio horse's tail confirmed as the longest in the world"]
+    day = reals + ["Regina's retired racing pigeons get a new loft"]
+    fake = "Autumn lantern walk for Regina's night-shift workers at Wascana"
+    fails = gates.check_fake(fake, reals, day)
+    assert "new name" in fails
+    why = gates.explain(fake, fails, reals, day)
+    named = next(w for w in why if w.startswith("new name"))
+    assert "Wascana" in named and "Regina" not in named
+    title = "Teacher Wins Regional Award For Turning Classroom Bins Into Instruments"
+    tday = day + ["a teacher wins an award for turning old bins into classroom drums"]
+    assert "title case" in gates.check_fake(title, reals, tday)
+    assert "new name" not in gates.check_fake(title, reals, tday)
+    fake2 = "Moose library branch moves into former curling rink"
+    why2 = gates.explain(fake2, ["same story"], reals, day)
+    assert why2 == [f'same story as "{reals[0]}"']
+
+
 def test_a_fake_must_not_copy_the_opening_of_its_round():
     reals = ["'I bathe, wash dishes, apply make-up': Japan's PM says busier than men who came before",
              "Germany briefly shuts Nuremberg airport and scrambles jets to escort flight",

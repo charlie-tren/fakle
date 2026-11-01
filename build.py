@@ -265,6 +265,7 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
         for t, f in zip(todo, got):
             why = gates.check_fake(f, [x["text"] for x in rounds[t]], day, required)
             if why:
+                why = gates.explain(f, why, [x["text"] for x in rounds[t]], day, required)
                 # Printed so a dropped mode says which rule dropped it.
                 print(f"{seed} round {t + 1} rejected ({', '.join(why)}): {f}")
                 notes[t] = why
