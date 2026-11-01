@@ -154,7 +154,28 @@ def test_a_broken_oddity_feed_costs_nothing(monkeypatch):
     def boom(*a, **k):
         raise OSError("down")
     monkeypatch.setattr(pool.requests, "get", boom)
+    monkeypatch.setattr(pool.time, "sleep", lambda s: None)
     assert pool.load_oddities() == []
+
+
+def test_a_feed_that_fails_once_is_tried_again(monkeypatch):
+    calls = []
+
+    class R:
+        content = SEARCH_RSS.encode()
+
+        def raise_for_status(self):
+            pass
+
+    def flaky(url, **k):
+        calls.append(url)
+        if calls.count(url) == 1:
+            raise OSError("blip")
+        return R()
+    monkeypatch.setattr(pool.requests, "get", flaky)
+    monkeypatch.setattr(pool.time, "sleep", lambda s: None)
+    pool.load_oddities()
+    assert all(calls.count(u) == 2 for u in set(calls))
 
 
 

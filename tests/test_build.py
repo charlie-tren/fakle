@@ -522,6 +522,30 @@ def test_the_judge_sends_back_a_fake_it_spots(monkeypatch):
 
 
 
+def test_a_round_the_judge_keeps_catching_gives_way_to_the_spare():
+    # 02/11/2026: two spotted fakes went out while a written spare sat unused.
+    p = pool.build_pool(FIX["articles"])
+    first = good_fakes(rounds_of(p))
+    again = [f.replace("zqa", "zxa") for f in first]
+    base, calls = stub([first, again, again])
+
+    def gen(prompt):
+        if "written by AI" in prompt:
+            guesses = []
+            for block in re.split(r"^Round \d+:\n", prompt, flags=re.M)[1:]:
+                lines = [l for l in block.splitlines() if re.match(r"^[1-4]\. ", l)][:4]
+                fake = next(i for i, l in enumerate(lines) if re.search(r"\bz[qx][a-f]\b", l.lower()))
+                # Always catches round 1's fake, never any other.
+                hit = re.search(r"\bz[qx]a\b", lines[fake].lower())
+                guesses.append(fake + 1 if hit else (fake + 1) % 4 + 1)
+            return json.dumps({"guesses": guesses}), "stub"
+        return base(prompt)
+    out = build.make_mode(p, gen, "s")
+    texts = " ".join(h["text"].lower() for r in out for h in r["headlines"])
+    assert len(out) == 5
+    assert "zqf" in texts and "zqa" not in texts and "zxa" not in texts
+
+
 def test_an_already_built_day_still_lands_in_memory(tmp_path):
     out = tmp_path / "puzzle.json"
     out.write_text(json.dumps({"date": "2026-10-11", "rounds": [

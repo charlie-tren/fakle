@@ -5,6 +5,7 @@ import datetime as dt
 import email.utils
 import json
 import re
+import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -89,13 +90,19 @@ def load_oddities() -> list[dict]:
     feeds = list(ODDITIES.items()) + [(None, SEARCH.format(q=q)) for q in SEARCHES]
     out = []
     for source, url in feeds:
-        # A dead feed costs its headlines, never the puzzle.
-        try:
-            r = requests.get(url, headers=UA, timeout=30)
-            r.raise_for_status()
-            out += parse_feed(r.content, source, now)
-        except Exception as exc:
-            print(f"oddities: {source or url}: {type(exc).__name__}")
+        # A dead feed costs its headlines, never the puzzle. Google News fails now and then
+        # from GitHub's runners (2 builds in 12, 02/11/2026), so each feed gets a second go.
+        for attempt in range(2):
+            try:
+                r = requests.get(url, headers=UA, timeout=30)
+                r.raise_for_status()
+                out += parse_feed(r.content, source, now)
+                break
+            except Exception as exc:
+                code = getattr(getattr(exc, "response", None), "status_code", "")
+                print(f"oddities: {source or url}: {type(exc).__name__} {code}".rstrip())
+                if attempt == 0:
+                    time.sleep(5)
     return out
 
 

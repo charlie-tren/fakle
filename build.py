@@ -309,6 +309,19 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
             # A replacement that clashes with another fake keeps the spotted one.
             if not structure_clash([trial[x] for x in done], required):
                 fakes = trial
+    # The last rewrite was never judged, and a round still caught after every rewrite went
+    # out anyway while a written spare sat unused (02/11/2026: two spotted fakes published).
+    spares = [t for t in sorted(fakes) if t not in done]
+    final = _judged(rounds, fakes, done + spares, gen, seed) if JUDGE_TRIES else {}
+    clean = [t for t in spares if t not in final]
+    for t in [t for t in done if t in final]:
+        if not clean:
+            break
+        trial = sorted([x for x in done if x != t] + [clean[0]])
+        if not structure_clash([fakes[x] for x in trial], required):
+            print(f"{seed} round {t + 1} replaced by the spare round {clean[0] + 1}")
+            done = trial
+            clean.pop(0)
     out = []
     for n, t in enumerate(done):
         pos = random.Random(f"{seed}:{n}").randrange(4)
