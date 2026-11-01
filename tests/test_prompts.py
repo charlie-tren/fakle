@@ -83,11 +83,9 @@ def test_each_fake_takes_its_form_from_outside_the_game():
     rounds = [POOL[0:3], POOL[3:6], POOL[6:9]]
     others = POOL[20:30]
     p = prompts.fake_prompt(rounds, seed="2026-10-11:normal", others=others)
-    forms = [line for line in p.splitlines() if line.startswith("Form: the shape of")]
-    assert len(forms) == 3 and len(set(forms)) == 3
-    for line in forms:
-        assert any(f'"{x["text"]}"' in line for x in others)
-        assert not any(f'"{x["text"]}"' in line for r in rounds for x in r)
+    # A model to copy made a clone of it wherever it came from (02/11/2026).
+    assert "Form:" not in p
+    assert "108 clay" in p and "Take the NAME only" in p
 
 
 def test_fake_prompt_carries_the_good_fake_example():

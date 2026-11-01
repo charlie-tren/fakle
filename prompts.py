@@ -75,7 +75,12 @@ Rules:
   below. Vague fakes ("local council chief", "three pilots", "officials") are the first
   ones players spot. Use a number only if a real one in its round has one.
 - Take every name, place and organisation from the list of other real headlines from
-  today, never from the three in its round.
+  today, never from the three in its round. Take the NAME only, and put it in a story
+  that has nothing to do with the headline it came from: not its event, topic, numbers or
+  shape. Wrong: from "We learn about a zine making workshop at Makerspace in Yellowknife",
+  writing "Yellowknife Makerspace says its laser cutter is booked solid through March".
+  Wrong: from "Bhutan builds 108 stupas in 9 hours", writing "Nashik potters fire 108 clay
+  lamps in 9 hours".
 - Never claim anyone committed a crime, did anything sexual, is ill or died.
 - Never make a household-name company, brand or celebrity the subject. Strange true
   stories are almost always about obscure local players, so a famous name doing something
@@ -154,7 +159,6 @@ def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = N
                 others: list[dict] | None = None, required: str | None = None,
                 seed: str = "", hard: list[str] | None = None) -> str:
     blocks = []
-    start = sum(map(ord, seed))
     for n, r in enumerate(rounds):
         # No source labels: the model copies them into its fake.
         lines = "\n".join(f"- {x['text']}" for x in r)
@@ -165,12 +169,10 @@ def fake_prompt(rounds: list[list[dict]], notes: dict[int, list[str]] | None = N
         # pad its fakes with a stray last word to hit it.
         mean = sum(len(x["text"].split()) for x in r) / len(r)
         lo, hi = round(mean * 0.7 + 0.49), int(mean * 1.3)
-        shape = ""
-        if others:
-            model = others[(start + 7 * n) % len(others)]["text"]
-            shape = (f"\nForm: the shape of \"{model}\" (its kind of opening, punctuation "
-                     "and register), none of its story.")
-        shape += f"\nLength: between {lo} and {hi} words."
+        # No model headline to copy the form of: one from its own round made a visible twin
+        # (15/10/2026) and one from outside made a clone of that headline instead ("108 clay
+        # lamps in 9 hours", 02/11/2026). build.structure_clash keeps the five varied.
+        shape = f"\nLength: between {lo} and {hi} words."
         blocks.append(f"Round {n + 1}:\n{lines}{shape}{extra}")
     other = "\n".join(f"- {x['text']}" for x in (others or [])) or "(none)"
     # Earlier fakes that most players took for real: the register to aim for.
