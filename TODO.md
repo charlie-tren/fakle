@@ -2,6 +2,7 @@
 
 | ID | Priority | Duration | Input | Prereqs | Description |
 |---|---|---|---|---|---|
+| F3 | 1.5 | 5 min | Auto | 03/11 build | **Read the 03/11 build log.** First scheduled build with the 02/11 fixes (named rejection notes, sentence case, no form model, the spare round replacing a fake the judge still catches, a second try per feed). Check it passed first time, count rejections by gate, and look for "replaced by the spare round" and any `oddities:` line with its status code. If it needed retries, fix the gate that rejected most. |
 
 ## Closed
 
