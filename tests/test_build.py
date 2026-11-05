@@ -18,7 +18,7 @@ def stub(fakes_by_call):
             return "{}", "stub"
         if "most absurd" in prompt:
             k = int(re.search(r"Group them into (\d+) rounds", prompt).group(1))
-            return json.dumps({"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17]][:k]}), "stub"
+            return json.dumps({"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17], [18, 19, 20]][:k]}), "stub"
         out = fakes_by_call[calls["fake"]]
         calls["fake"] += 1
         n = len(re.findall(r"^Round \d+:", prompt, re.M))
@@ -34,7 +34,7 @@ BASE = "officials say the new plan will be reviewed again later with more talks 
 def rounds_of(p):
     """The rounds make_mode will form from the stub's first 15 picks."""
     c = [x for x in p if not build.gates.ALLEGATION.search(x["text"]) and not build.DARK.search(x["text"])]
-    return [c[i:i + 3] for i in range(0, 18, 3)]
+    return [c[i:i + 3] for i in range(0, 21, 3)]
 
 
 def good_fakes(rounds_pool):
@@ -49,7 +49,7 @@ def good_fakes(rounds_pool):
         name = next(m for m in names if m not in own and m not in used)
         used.add(name)
         n = round(sum(len(x["text"].split()) for x in r) / len(r))
-        out.append(" ".join([name.title()] + BASE[:n - 2] + ["zq" + "abcdef"[i]]))
+        out.append(" ".join([name.title()] + BASE[:n - 2] + ["zq" + "abcdefg"[i]]))
     return out
 
 
@@ -74,7 +74,7 @@ def test_fake_position_is_deterministic():
 
 def test_failing_round_is_retried_then_mode_dropped():
     p = pool.build_pool(FIX["articles"])
-    bad = ["Senator Jane Hargreaves arrested"] * 6
+    bad = ["Senator Jane Hargreaves arrested"] * 7
     gen, calls = stub([bad] * 5)
     assert build.make_mode(p, gen, "s") is None
     assert calls["fake"] == 5
@@ -130,7 +130,7 @@ def test_fake_prompt_carries_unpicked_headlines():
     build.make_mode(p, gen, "s")
     fake_prompts = [x for x in seen if "most absurd" not in x and "written by AI" not in x]
     first_unpicked = [x for x in p if not build.gates.ALLEGATION.search(x["text"])
-                      and not build.DARK.search(x["text"])][18]
+                      and not build.DARK.search(x["text"])][21]
     assert fake_prompts and all(first_unpicked["text"] in x for x in fake_prompts)
 
 
@@ -212,24 +212,26 @@ def test_pick_with_a_same_story_round_is_retried():
         "Feathers turned into fertiliser by pupils", "Baby dinosaur fossil puzzles scientists",
         "Dolly Parton records a Welsh cover", "Rogue AI agent gives police a tip",
         "Horseback archery thrills two riders", "Ragebait named youth word of the year",
-        "Grenade brought to police headquarters", "Penguin escapes zoo by riding a delivery van"]]
-    bad = {"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17]]}
-    good = {"rounds": [[0, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15], [16, 17, 1]]}
+        "Grenade brought to police headquarters", "Penguin escapes zoo by riding a delivery van",
+        "Goat elected honorary mayor for a week", "Bakery bakes a croissant as long as a car",
+        "Lizard owner leaves army post 64 times"]]
+    bad = {"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17], [18, 19, 20]]}
+    good = {"rounds": [[0, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15], [16, 17, 1], [18, 19, 20]]}
     answers = [bad, good]
     gen = lambda prompt: (json.dumps(answers.pop(0)), "stub")
     assert build._pick(p, gen) == good["rounds"]
 
 
 def test_pick_keeps_a_same_story_round_rather_than_nothing():
-    p = [{"text": f"Ukraine president story number {i}, envoy says", "source": "X", "url": ""} for i in range(20)]
-    bad = {"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17]]}
+    p = [{"text": f"Ukraine president story number {i}, envoy says", "source": "X", "url": ""} for i in range(21)]
+    bad = {"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17], [18, 19, 20]]}
     gen = lambda prompt: (json.dumps(bad), "stub")
     assert build._pick(p, gen) == bad["rounds"]
 
 
 def test_dropped_mode_says_why(capsys):
     p = pool.build_pool(FIX["articles"])
-    bad = ["Senator Jane Hargreaves arrested"] * 6
+    bad = ["Senator Jane Hargreaves arrested"] * 7
     gen, _ = stub([bad] * 5)
     assert build.make_mode(p, gen, "s") is None
     out = capsys.readouterr().out
@@ -283,7 +285,7 @@ def test_force_rebuilds_both_modes(tmp_path, monkeypatch):
 
 def test_boring_headlines_are_dropped_before_sampling_a_big_pool():
     boring = [{"text": f"Shares in company {i} rise after quarterly earnings beat forecasts", "source": "X", "url": ""} for i in range(300)]
-    odd = [{"text": f"Town elects goat number {i} as honorary mayor for a week", "source": "X", "url": ""} for i in range(20)]
+    odd = [{"text": f"Town elects goat number {i} as honorary mayor for a week", "source": "X", "url": ""} for i in range(25)]
     seen = []
 
     def gen(prompt):
@@ -352,7 +354,7 @@ def test_a_failed_chunk_is_skipped_not_fatal():
             if calls["n"] == 2:
                 raise build.llm.NoProvider("minute limit")
             return json.dumps({"picks": list(range(10))}), "stub"
-        return json.dumps({"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17]]}), "stub"
+        return json.dumps({"rounds": [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17], [18, 19, 20]]}), "stub"
     try:
         build.make_mode(p, gen, "s")
     except build.llm.NoProvider:
@@ -509,7 +511,7 @@ def test_the_judge_sends_back_a_fake_it_spots(monkeypatch):
             guesses = []
             for n, block in enumerate(re.split(r"^Round \d+:\n", prompt, flags=re.M)[1:]):
                 lines = [l for l in block.splitlines() if re.match(r"^[1-4]\. ", l)][:4]
-                fake = next(i for i, l in enumerate(lines) if re.search(r"\bz[qx][a-f]\b", l.lower()))
+                fake = next(i for i, l in enumerate(lines) if re.search(r"\bz[qx][a-g]\b", l.lower()))
                 # Spots round 1 the first time; wrong everywhere else.
                 right = seen["judge"] == 1 and n == 0
                 guesses.append(fake + 1 if right else (fake + 1) % 4 + 1)
@@ -534,7 +536,7 @@ def test_a_round_the_judge_keeps_catching_gives_way_to_the_spare():
             guesses = []
             for block in re.split(r"^Round \d+:\n", prompt, flags=re.M)[1:]:
                 lines = [l for l in block.splitlines() if re.match(r"^[1-4]\. ", l)][:4]
-                fake = next(i for i, l in enumerate(lines) if re.search(r"\bz[qx][a-f]\b", l.lower()))
+                fake = next(i for i, l in enumerate(lines) if re.search(r"\bz[qx][a-g]\b", l.lower()))
                 # Always catches round 1's fake, never any other.
                 hit = re.search(r"\bz[qx]a\b", lines[fake].lower())
                 guesses.append(fake + 1 if hit else (fake + 1) % 4 + 1)

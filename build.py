@@ -192,7 +192,9 @@ def make_mode(p: list[dict], gen, seed: str, day: list[str] | None = None,
               required: str | None = None, others_pool: list[dict] | None = None,
               count: int = prompts.ROUNDS, recent: list[str] | None = None,
               hard: list[str] | None = None) -> list[dict] | None:
-    picks = count + 1                      # one spare round
+    # Two spares for the general rounds: with one, two stubborn rounds failed the day
+    # (06/11/2026, four of six written). Trump's pool is small, so it keeps one.
+    picks = count + (1 if required else 2)
     min_pool = picks * prompts.PER
     # A real carrying a barred word could never be the fake, so it would be a free
     # elimination. It stays in the day's vocabulary; it just cannot be picked.

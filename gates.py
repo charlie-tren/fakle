@@ -123,9 +123,13 @@ def check_fake(fake: str, reals: list[str], day_titles: list[str], required: str
              if tok[0].islower() for w in words(tok)}
     toks = re.findall(r"[A-Za-z][\w']*", fake)
     named = [t for t in toks[1:] if t[0].isupper() and words(t) - lower - {"s", required}]
-    # The first word is capitalised either way; it is a name if the day writes it as one.
+    # The first word is capitalised either way; it is a name if the day writes it capitalised
+    # anywhere and never in lower case. Mid-headline only missed a place that always leads its
+    # headline: "Hurghada dive school trains retired fishermen..." failed as vague (06/11/2026).
+    caps = {w for t in day_titles for tok in re.findall(r"[A-Za-z][\w']*", t)
+            if tok[0].isupper() for w in words(tok)}
     if toks and toks[0].lower() != required and words(toks[0]) - lower - {"s"} and \
-            toks[0].lower() in _mid_caps(day_titles) | US_STATES:
+            (words(toks[0]) & caps or toks[0].lower() in US_STATES):
         named.append(toks[0])
     # A number only where its round has one: asked for "a concrete detail", every fake
     # on the 14/10 trial carried a figure and almost no real did.
@@ -170,6 +174,10 @@ def explain(fake: str, fails: list[str], reals: list[str], day_titles: list[str]
         if f == "new name":
             f = (f"new name ({', '.join(_new_names(fake, day_titles))} not in today's headlines; "
                  "use only names from the list)")
+        elif f == "trailing clause":
+            m = re.search(r"\s(amid|as|ahead of|after|despite|in bid to)\s", fake, re.I)
+            f = (f"trailing clause (cut the \"{m.group(1)} ...\" part; none of its round has one)"
+                 if m else f)
         elif f == "title case":
             f = "written in Title Case; use sentence case, capitals only on the first word and names"
         elif f == "same story":

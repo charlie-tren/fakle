@@ -5,7 +5,7 @@ from __future__ import annotations
 import llm
 
 ROUNDS, PER = 5, 3
-PICK_ROUNDS = ROUNDS + 1   # one spare, so a round whose fake never passes does not sink the mode
+PICK_ROUNDS = ROUNDS + 2   # two spares, so rounds whose fakes never pass do not sink the mode
 
 PICK = """You are choosing headlines for Fakle, a daily game whose whole point is to show
 how strange the world is. Players see four headlines, three real and one invented, and

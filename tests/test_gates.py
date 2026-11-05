@@ -153,6 +153,19 @@ def test_explain_names_the_invented_words_and_the_matching_story():
     assert why2 == [f'same story as "{reals[0]}"']
 
 
+def test_a_place_that_only_leads_its_headline_still_counts_as_a_name():
+    # 06/11/2026: "Hurghada dive school..." failed as vague.
+    reals = ["Rockland Bakery breaks world record with 41-inch croissant",
+             "Ohio horse's tail confirmed as the longest in the world",
+             "Goat escapes yard and visits a school in New York"]
+    day = reals + ["Hurghada hotel opens a reef museum on the coast"]
+    fake = "Hurghada dive school trains retired fishermen to count seahorses"
+    assert "vague" not in gates.check_fake(fake, reals, day)
+    why = gates.explain("Bakery switches to rice husk ovens after months of tests",
+                        ["trailing clause"], reals, day)
+    assert why == ['trailing clause (cut the "after ..." part; none of its round has one)']
+
+
 def test_a_fake_must_not_copy_the_opening_of_its_round():
     reals = ["'I bathe, wash dishes, apply make-up': Japan's PM says busier than men who came before",
              "Germany briefly shuts Nuremberg airport and scrambles jets to escort flight",
