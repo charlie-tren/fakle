@@ -2,9 +2,15 @@
 
 | ID | Priority | Duration | Input | Prereqs | Description |
 |---|---|---|---|---|---|
-| F3 | 1.5 | 5 min | Auto | 03/11 build | **Read the 03/11 build log.** First scheduled build with the 02/11 fixes (named rejection notes, sentence case, no form model, the spare round replacing a fake the judge still catches, a second try per feed). Check it passed first time, count rejections by gate, and look for "replaced by the spare round" and any `oddities:` line with its status code. If it needed retries, fix the gate that rejected most. |
 
 ## Closed
+
+- **F3** Read the builds after the 02/11 fixes. DONE 06/11/2026: 04/11 and 05/11 passed
+  first time; 03/11 and 06/11 failed their first runs. On 06/11 four of six general rounds
+  were written; the two stuck rounds were a false "vague" (Hurghada only ever leads its
+  headline, so it was not counted as a name) and a "trailing clause" note that never said
+  which word. Fixed both, and the general rounds now pick two spares. The rebuild passed
+  with the Trump round.
 
 - **F1** Investigate the daily-puzzle failures of 14-15/10/2026. MIS-SCOPED 02/11/2026: not
   the Pages deploy. The `publish` job's "Fail the run if the build failed" step is where a
