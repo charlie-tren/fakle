@@ -45,6 +45,7 @@ body.at-home .bar .letters{visibility:hidden}
 #home .tiles{list-style:none;display:flex;justify-content:center;gap:12px;padding:0;margin:0 0 22px}
 #home .tiles li{width:84px;height:84px;border-radius:18px;display:grid;place-items:center;font-weight:800;font-size:2.9rem;padding-top:6px;
   background:#fff;color:var(--bg);box-shadow:0 6px 0 var(--edge)}
+#home .tiles li.odd{background:#ff4f6d;color:#fff;box-shadow:0 6px 0 #b3243c}
 #home .line{font-weight:700;font-size:1.5rem;margin:0 0 6px}
 #home .date{color:#e4dcff;font-size:1.05rem;margin:0 0 28px}
 #home .meta{color:#e4dcff;font-size:1rem;margin:18px 0 0}
